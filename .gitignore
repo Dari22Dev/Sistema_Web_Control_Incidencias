@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Sensitive data and databases
+*.db
+*.sqlite
+*.sqlite3
+*.xlsx
+*.xls
+*.csv
+.env
+.env.*
+!*.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

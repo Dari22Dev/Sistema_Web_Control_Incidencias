@@ -1,23 +1,52 @@
 /**
- * Normaliza y mapea la sucursal del Excel de entrada a los nombres de las pestañas de salida.
- * @param {string} sucursalRaw
+ * Normaliza texto (minúsculas, sin tildes, sin espacios repetidos)
+ * para comparar de forma estable nombres de columna y conceptos de asistencia.
+ * @param {any} v
  * @returns {string}
  */
-export function determineSucursal(sucursalRaw) {
-  if (!sucursalRaw) return 'SM COSTAZUL'; // Default fallback
-  const normalized = sucursalRaw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+export function normalizeText(v) {
+  if (v === undefined || v === null) return '';
+  return String(v)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\.$/, '');
+}
 
-  if (normalized.includes('sigo') || normalized.includes('bodegon') || normalized.includes('bod')) {
-    return 'BODEGÓN COSTAZUL';
-  } else if (normalized.includes('happy shack') && (normalized.includes('ii') || normalized.includes('2'))) {
-    return 'HAPPY SHACK II';
-  } else if (normalized.includes('happy shack')) {
-    return 'HAPPY SHACK';
-  } else if (normalized.includes('supermarket') || normalized.includes('sm') || normalized.includes('costazul')) {
-    return 'SM COSTAZUL';
+/**
+ * Normaliza y mapea la sucursal del Excel a la clave de configuración correcta.
+ * Recibe una lista de sucursales configuradas y compara por similitud de texto.
+ * Si no hay coincidencia, retorna la primera sucursal de la lista (por defecto).
+ *
+ * @param {string} sucursalRaw - Valor crudo del campo sucursal en el Excel.
+ * @param {Array<{name: string}>} sucursales - Lista de sucursales configuradas por el usuario.
+ * @returns {string} El nombre de la sucursal configurada que mejor hace match.
+ */
+export function determineSucursal(sucursalRaw, sucursales) {
+  if (!sucursalRaw || !sucursales || sucursales.length === 0) {
+    return sucursales?.[0]?.name || 'SUCURSAL 1';
   }
 
-  return 'SM COSTAZUL'; // Default fallback
+  const normalized = normalizeText(sucursalRaw);
+
+  // Buscar la sucursal configurada cuyo nombre tenga más solapamiento con el valor del Excel
+  for (const suc of sucursales) {
+    const sucNorm = normalizeText(suc.name);
+    // Match directo o si el nombre de la sucursal está contenido en el valor crudo o viceversa
+    if (
+      normalized.includes(sucNorm) ||
+      sucNorm.includes(normalized) ||
+      // Comparar palabras clave (al menos una palabra coincide)
+      sucNorm.split(' ').some(word => word.length > 2 && normalized.includes(word))
+    ) {
+      return suc.name;
+    }
+  }
+
+  // Fallback: primera sucursal
+  return sucursales[0].name;
 }
 
 /**
@@ -39,27 +68,11 @@ const MONTH_MAP = {
 };
 
 /**
- * Normaliza texto (minúsculas, sin tildes, sin espacios repetidos, sin punto final)
- * para comparar de forma estable nombres de columna y conceptos de asistencia.
- * @param {any} v
- * @returns {string}
- */
-function normalizeText(v) {
-  if (v === undefined || v === null) return '';
-  return String(v)
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .replace(/\.$/, '');
-}
-
-/**
  * Parsea una celda de fecha del encabezado del Excel.
  * Soporta objetos Date nativos, números seriales de Excel y cadenas de texto como "1 Jun", "16-Jun".
  * @param {any} cell
  * @param {number} year
+ * @param {number|null} defaultMonthIdx
  * @returns {Date|null}
  */
 export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
@@ -67,8 +80,6 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
 
   // 1. Si ya es un objeto Date
   if (cell instanceof Date) {
-    // Ajustamos las horas para posicionar la fecha al mediodía local.
-    // Esto evita que diferencias de zona horaria (UTC vs Local) desplacen el día al anterior o siguiente.
     const d = new Date(cell.getTime());
     if (d.getHours() < 6) {
       d.setHours(12);
@@ -81,7 +92,6 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
 
   // 2. Si es un número
   if (typeof cell === 'number') {
-    // Si es un número simple <= 31, asumimos que es el día del mes seleccionado
     if (cell <= 31) {
       if (defaultMonthIdx !== null) {
         return new Date(year, defaultMonthIdx, cell);
@@ -89,9 +99,8 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
       return null;
     }
 
-    // Si es un número serial de Excel (ej: 46174 para Jun 1, 2026)
+    // Número serial de Excel
     const date = new Date((cell - 25569) * 86400 * 1000);
-    // Ajustar por zona horaria local para evitar descalces de día
     const tzOffset = date.getTimezoneOffset() * 60000;
     return new Date(date.getTime() + tzOffset);
   }
@@ -101,7 +110,6 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
     const trimmed = cell.trim();
     if (trimmed === '') return null;
 
-    // Excluir nombres de días de la semana (LUN, MAR, MON, TUE, etc.) para evitar falsos positivos en Date.parse
     const cleanLower = normalizeText(trimmed);
     const weekDays = [
       'lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom',
@@ -113,7 +121,7 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
       return null;
     }
 
-    // A. Si es solo un número simple (ej: "16")
+    // A. Día simple en número (ej: "16")
     const dayOnly = parseInt(trimmed, 10);
     if (!isNaN(dayOnly) && String(dayOnly) === trimmed && dayOnly <= 31) {
       if (defaultMonthIdx !== null) {
@@ -122,7 +130,7 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
       return null;
     }
 
-    // B. Soporte para formatos DD/MM/YYYY, DD-MM-YYYY, DD/MM, DD-MM y con meses en palabras (ej. DD/MMM/YYYY o DD/MMM)
+    // B. Formatos DD/MM/YYYY, DD-MM-YYYY, DD/MM, DD-MM
     const parts = trimmed.split(/[\/\-]/);
     if (parts.length >= 2) {
       const day = parseInt(parts[0], 10);
@@ -133,7 +141,6 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
       if (!isNaN(monthVal)) {
         monthIdx = monthVal - 1;
       } else {
-        // Si el mes está escrito como palabra (ej: "jun", "junio")
         const monthStr = mPart.toLowerCase().slice(0, 3);
         monthIdx = MONTH_MAP[monthStr];
       }
@@ -152,7 +159,7 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
       }
     }
 
-    // C. Si es formato texto: "16 de junio", "16 jun", "01-jun"
+    // C. Formato texto: "16 de junio", "16 jun", "01-jun"
     const clean = trimmed.toLowerCase().replace(/-/g, ' ');
     const match = clean.match(/^(\d+)\s*(?:de\s+)?([a-zñ]{3,4})/);
     if (match) {
@@ -162,12 +169,6 @@ export function parseHeaderDate(cell, year, defaultMonthIdx = null) {
       if (monthIdx !== undefined) {
         return new Date(year, monthIdx, day);
       }
-    }
-
-    // D. Probar parsear directo con Date.parse (como último recurso)
-    const parsedTime = Date.parse(`${trimmed} ${year}`);
-    if (!isNaN(parsedTime)) {
-      return new Date(parsedTime);
     }
   }
 
@@ -187,21 +188,6 @@ export function formatDateString(date) {
 }
 
 /**
- * Determina si un estatus diario indica que el empleado trabajó (uso genérico externo).
- * La lógica interna de processIncidencias usa CONCEPT_RULES en su lugar.
- * @param {string} status
- * @returns {boolean}
- */
-export function isWorkedStatus(status) {
-  const norm = normalizeText(status);
-  if (!norm) return false;
-  for (const rules of Object.values(CONCEPT_RULES)) {
-    if (rules[norm] && !rules[norm].ausencia) return true;
-  }
-  return false;
-}
-
-/**
  * Retorna la fecha local formateada como YYYY-MM-DD para evitar desfases de zona horaria.
  * @param {Date} date
  * @returns {string}
@@ -214,9 +200,8 @@ export function getLocalISODate(date) {
   return `${y}-${m}-${d}`;
 }
 
-// Posiciones de columna fijas del layout vigente (confirmado sobre consolidado_incidencias_1Qjulio.xlsx):
-// CEDULA | COD MELÉ | NOMBRES Y APELLIDOS | CARGO | DEPARTAMENTO | SUCURSAL | TURNO | DIAS LIBRES | <fechas...>
-const COL = {
+// Posiciones por defecto de columnas fijas
+const DEFAULT_COLS = {
   CEDULA: 0,
   CODIGO: 1,
   NOMBRE: 2,
@@ -227,73 +212,229 @@ const COL = {
   DIAS_LIBRES: 7
 };
 
-// Conceptos que nunca generan incidencia (no cuentan para nada), iguales en todas las sucursales.
-const SKIP_CONCEPTS = new Set(['permiso', 'reposo', 'formaciones', 'dia libre', 'vacaciones']);
-
-// Reglas de bono nocturno / domingo-feriado / ausencia por sucursal y concepto (texto normalizado).
-// bono: valor fijo de bono nocturno.
-// bonoWeekday/bonoSunday: valor de bono nocturno distinto si el día cae domingo.
-// domingoFeriado: true => genera además incidencia DOMINGO (si aplica) y FERIADO (si la fecha está en feriadosList).
-// ausencia: nombre del tipo de incidencia de ausencia (valor fijo 1, no genera bono ni domingo/feriado).
-const CONCEPT_RULES = {
-  'SM COSTAZUL': {
-    'presente apertura a tiempo': { bono: 0, domingoFeriado: true },
-    'presente cierre a tiempo': { bono: 3, domingoFeriado: true },
-    'presente cierre': { bono: 3, domingoFeriado: true },
-    'presente a tiempo': { bono: 2, domingoFeriado: true },
-    'asistio': { bono: 2, domingoFeriado: true },
-    'redoble': { bono: 3, domingoFeriado: true },
-    'redoble especial': { bono: 3, domingoFeriado: true },
-    'ausencia injustificada': { ausencia: 'AUSENCIA INJUSTIFICADA' },
-    'falta injustificada': { ausencia: 'AUSENCIA INJUSTIFICADA' },
-    'ausencia justificada': { ausencia: 'AUSENCIA JUSTIFICADA' },
-    'falta justificada': { ausencia: 'AUSENCIA JUSTIFICADA' }
+export const DEFAULT_SUCURSALES_CONFIG = [
+  {
+    name: 'Sambil',
+    incidencias: {
+      cierre: true,
+      redoble: true,
+      presente: true,
+      apertura: true,
+      domingo: true,
+      feriado: true,
+      ausenciaJustificada: true,
+      ausenciaInjustificada: true,
+      reposo: false
+    },
+    bonoCierre: 3,
+    bonoRedoble: 3,
+    bonoPresente: 2,
+    bonoApertura: 0,
+    bonoDomingo: 2,
+    valorDomingo: 1,
+    valorFeriado: 1,
+    valorAusenciaJ: 1,
+    valorAusenciaI: 1,
+    valorReposo: 1
   },
-  'BODEGÓN COSTAZUL': {
-    'presente a tiempo': { bonoWeekday: 2, bonoSunday: 1, domingoFeriado: true },
-    'presente cierre a tiempo': { bonoWeekday: 2, bonoSunday: 1, domingoFeriado: true },
-    'asistio': { bono: 2, domingoFeriado: true },
-    'ausencia injustificada': { ausencia: 'AUSENCIA INJUSTIFICADA' },
-    'falta injustificada': { ausencia: 'AUSENCIA INJUSTIFICADA' },
-    'ausencia justificada': { ausencia: 'AUSENCIA JUSTIFICADA' },
-    'falta justificada': { ausencia: 'AUSENCIA JUSTIFICADA' }
-  },
-  'HAPPY SHACK': {
-    'presente apertura a tiempo': { bono: 0, domingoFeriado: true },
-    'presente cierre a tiempo': { bono: 3, domingoFeriado: true },
-    '1 hora extra': { bono: 2, domingoFeriado: true },
-    '2 hora extra': { bono: 3, domingoFeriado: true },
-    'redoble': { bono: 3, domingoFeriado: true },
-    'ausencia injustificada': { ausencia: 'AUSENCIA INJUSTIFICADA' },
-    'falta injustificada': { ausencia: 'AUSENCIA INJUSTIFICADA' },
-    'ausencia justificada': { ausencia: 'AUSENCIA JUSTIFICADA' },
-    'falta justificada': { ausencia: 'AUSENCIA JUSTIFICADA' }
-  },
-  'HAPPY SHACK II': {
-    'presente apertura a tiempo': { bono: 0, domingoFeriado: true },
-    'presente cierre a tiempo': { bono: 3, domingoFeriado: true },
-    '1 hora extra': { bono: 2, domingoFeriado: true },
-    '2 hora extra': { bono: 3, domingoFeriado: true },
-    'redoble': { bono: 3, domingoFeriado: true },
-    'ausencia injustificada': { ausencia: 'AUSENCIA INJUSTIFICADA' },
-    'falta injustificada': { ausencia: 'AUSENCIA INJUSTIFICADA' },
-    'ausencia justificada': { ausencia: 'AUSENCIA JUSTIFICADA' },
-    'falta justificada': { ausencia: 'AUSENCIA JUSTIFICADA' }
+  {
+    name: 'La Vela',
+    incidencias: {
+      cierre: true,
+      redoble: true,
+      presente: true,
+      apertura: true,
+      domingo: true,
+      feriado: true,
+      ausenciaJustificada: true,
+      ausenciaInjustificada: true,
+      reposo: false
+    },
+    bonoCierre: 2,
+    bonoRedoble: 3,
+    bonoPresente: 2,
+    bonoApertura: 0,
+    bonoDomingo: 1,
+    valorDomingo: 1,
+    valorFeriado: 1,
+    valorAusenciaJ: 1,
+    valorAusenciaI: 1,
+    valorReposo: 1
   }
-};
+];
+
+/**
+ * Evalúa el estatus diario para una sucursal dada y genera las incidencias correspondientes.
+ * Cuenta de forma exhaustiva y precisa:
+ * - AUSENCIAS JUSTIFICADAS
+ * - AUSENCIAS INJUSTIFICADAS
+ * - REPOSOS (si está habilitado)
+ * - BONO NOCTURNO (con valor configurable por tipo de turno)
+ * - DOMINGOS TRABAJADOS
+ * - FERIADOS TRABAJADOS
+ *
+ * Cada incidencia se activa/desactiva y se valoriza según la configuración de la sucursal.
+ *
+ * @param {string} cellValue - Valor de la celda del Excel.
+ * @param {Object} sucursalConfig - Configuración de la sucursal.
+ * @param {boolean} isSunday
+ * @param {boolean} isFeriado
+ * @returns {Array<{ type: string, value: number }>}
+ */
+export function evaluateDailyStatus(cellValue, sucursalConfig, isSunday, isFeriado) {
+  if (!cellValue) return [];
+
+  const raw = String(cellValue).trim();
+  if (!raw) return [];
+
+  const norm = normalizeText(raw);
+  const cleanAlpha = norm.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const cfg = sucursalConfig || {};
+  const enabled = cfg.incidencias || {
+    cierre: true,
+    redoble: true,
+    presente: true,
+    apertura: true,
+    domingo: true,
+    feriado: true,
+    ausenciaJustificada: true,
+    ausenciaInjustificada: true,
+    reposo: false
+  };
+
+  const bonoCierre   = Number(cfg.bonoCierre   ?? 3);
+  const bonoRedoble  = Number(cfg.bonoRedoble  ?? 3);
+  const bonoPresente = Number(cfg.bonoPresente ?? 2);
+  const bonoApertura = Number(cfg.bonoApertura ?? 0);
+  const bonoDomingo  = Number(cfg.bonoDomingo  ?? 1);
+  const valorAusenciaJ = Number(cfg.valorAusenciaJ ?? 1);
+  const valorAusenciaI = Number(cfg.valorAusenciaI ?? 1);
+  const valorFeriado   = Number(cfg.valorFeriado ?? 1);
+  const valorDomingo   = Number(cfg.valorDomingo ?? 1);
+  const valorReposo    = Number(cfg.valorReposo ?? 1);
+
+  // Manejo de Reposo
+  if (cleanAlpha.includes('reposo')) {
+    if (enabled.reposo) {
+      return [{ type: 'REPOSO', value: valorReposo }];
+    }
+    return [];
+  }
+
+  // 1. Conceptos a ignorar (no generan incidencias)
+  const skipKeywords = ['dia libre', 'vacaciones', 'formaciones', 'formacion', 'permiso'];
+  if (skipKeywords.includes(cleanAlpha)) {
+    return [];
+  }
+
+  // 2. DETECCIÓN DE AUSENCIAS (JUSTIFICADAS E INJUSTIFICADAS)
+  const isInjustificada =
+    cleanAlpha.includes('injustificad') ||
+    cleanAlpha.includes('no justificad') ||
+    cleanAlpha === 'ai' ||
+    cleanAlpha === 'fi' ||
+    cleanAlpha === 'a i' ||
+    cleanAlpha === 'f i';
+
+  const isJustificada =
+    (cleanAlpha.includes('justificad') && !isInjustificada) ||
+    cleanAlpha === 'aj' ||
+    cleanAlpha === 'fj' ||
+    cleanAlpha === 'a j' ||
+    cleanAlpha === 'f j';
+
+  // Ausencia / Falta genérica → AUSENCIA INJUSTIFICADA
+  const isAusenciaGenerica =
+    cleanAlpha === 'ausencia' ||
+    cleanAlpha === 'falta' ||
+    cleanAlpha === 'inasistencia' ||
+    cleanAlpha === 'ausente' ||
+    cleanAlpha.startsWith('ausencia ') ||
+    cleanAlpha.startsWith('falta ') ||
+    cleanAlpha.startsWith('inasistencia ');
+
+  if (isInjustificada || (isAusenciaGenerica && !isJustificada)) {
+    if (enabled.ausenciaInjustificada !== false) {
+      return [{ type: 'AUSENCIA INJUSTIFICADA', value: valorAusenciaI }];
+    }
+    return [];
+  }
+
+  if (isJustificada) {
+    if (enabled.ausenciaJustificada !== false) {
+      return [{ type: 'AUSENCIA JUSTIFICADA', value: valorAusenciaJ }];
+    }
+    return [];
+  }
+
+  // 3. DETECCIÓN DE ASISTENCIA Y CÁLCULO DE BONOS
+  const dailyIncidences = [];
+  let isWorked = false;
+  let bonoValue = 0;
+
+  if (cleanAlpha.includes('cierre')) {
+    if (enabled.cierre !== false) {
+      bonoValue = bonoCierre;
+      isWorked = true;
+    }
+  } else if (
+    cleanAlpha.includes('redoble') ||
+    cleanAlpha.includes('asistio especial') ||
+    cleanAlpha.includes('2 hora extra') ||
+    cleanAlpha.includes('2 horas extras')
+  ) {
+    if (enabled.redoble !== false) {
+      bonoValue = bonoRedoble;
+      isWorked = true;
+    }
+  } else if (cleanAlpha.includes('apertura')) {
+    if (enabled.apertura !== false) {
+      bonoValue = bonoApertura;
+      isWorked = true;
+    }
+  } else if (
+    cleanAlpha.includes('presente') ||
+    cleanAlpha === 'asistio' ||
+    cleanAlpha.includes('1 hora extra') ||
+    cleanAlpha.includes('1 horas extras')
+  ) {
+    if (enabled.presente !== false) {
+      bonoValue = (isSunday && bonoDomingo !== bonoPresente) ? bonoDomingo : bonoPresente;
+      isWorked = true;
+    }
+  }
+
+  if (isWorked) {
+    if (bonoValue > 0) {
+      dailyIncidences.push({ type: 'BONO NOCTURNO', value: bonoValue });
+    }
+    if (isSunday && enabled.domingo !== false) {
+      dailyIncidences.push({ type: 'DOMINGO', value: valorDomingo });
+    }
+    if (isFeriado && enabled.feriado !== false) {
+      dailyIncidences.push({ type: 'FERIADO', value: valorFeriado });
+    }
+  }
+
+  return dailyIncidences;
+}
 
 /**
  * Procesa la matriz de datos crudos de Excel y calcula las incidencias de cada colaborador.
+ * Soporta configuración dinámica de sucursales definidas por el usuario.
  *
  * @param {Array<Array<any>>} rawRows - Filas del Excel leídas como arreglo de arreglos.
  * @param {number} year - Año de procesamiento seleccionado por el usuario.
- * @param {number|null|Array<string>} monthIdx - Índice del mes (0-11) o lista de feriados (firma anterior).
- * @param {number|null} quincena - 1 para la primera quincena (1-15), 2 para la segunda (16-fin).
+ * @param {number|null} monthIdx - Índice del mes (0-11).
+ * @param {number|null} quincena - 1 para 1ra quincena (1-15), 2 para 2da (16-fin).
  * @param {Array<string>} feriadosList - Lista de fechas feriados en formato 'YYYY-MM-DD'.
- * @returns {Object} Un objeto con llaves para cada sucursal de destino y un arreglo de incidencias.
+ * @param {Array<Object>} sucursalesConfig
+ *   - Lista de sucursales configuradas por el usuario. Si no se provee, usa DEFAULT_SUCURSALES_CONFIG.
+ * @returns {Object} Un objeto con llave igual al nombre de cada sucursal configurada.
  */
-export function processIncidencias(rawRows, year, monthIdx = null, quincena = null, feriadosList = []) {
-  // Manejo de compatibilidad con la firma anterior de la función
+export function processIncidencias(rawRows, year, monthIdx = null, quincena = null, feriadosList = [], sucursalesConfig = null) {
+  // Compatibilidad hacia atrás: si monthIdx es un array, es feriadosList
   if (Array.isArray(monthIdx)) {
     feriadosList = monthIdx;
     monthIdx = null;
@@ -303,31 +444,39 @@ export function processIncidencias(rawRows, year, monthIdx = null, quincena = nu
     quincena = null;
   }
 
+  const sucursales = (sucursalesConfig && sucursalesConfig.length > 0)
+    ? sucursalesConfig
+    : DEFAULT_SUCURSALES_CONFIG;
+
   console.log('=== DEBUG PROCESAR INCIDENCIAS ===');
   console.log('Año UI:', year, 'Mes UI (0-11):', monthIdx, 'Quincena UI:', quincena);
   console.log('Feriados registrados:', feriadosList);
+  console.log('Sucursales configuradas:', sucursales.map(s => s.name));
 
-  const result = {
-    'SM COSTAZUL': [],
-    'BODEGÓN COSTAZUL': [],
-    'HAPPY SHACK': [],
-    'HAPPY SHACK II': []
-  };
+  // Inicializar resultado con las sucursales configuradas
+  const result = {};
+  sucursales.forEach(s => { result[s.name] = []; });
 
   if (!rawRows || rawRows.length === 0) {
     console.warn('El archivo de entrada está vacío.');
     return result;
   }
 
-  // 1. Localizar la fila de cabecera buscando "COD MEL" (con o sin punto/tilde) en cualquiera
-  //    de las primeras columnas, ya que su posición exacta puede variar entre archivos.
+  // 1. Localizar la fila de cabecera
   let headerRowIdx = -1;
   for (let i = 0; i < rawRows.length; i++) {
     const row = rawRows[i];
     if (!row) continue;
-    for (let c = 0; c < Math.min(row.length, 12); c++) {
-      const norm = normalizeText(row[c]);
-      if (norm.includes('cod mel') || norm === 'codigo') {
+    for (let c = 0; c < Math.min(row.length, 15); c++) {
+      const cellStr = String(row[c] || '');
+      const norm = normalizeText(cellStr).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (
+        norm.includes('cod mel') ||
+        norm.includes('codigo') ||
+        norm === 'cod' ||
+        norm.includes('cedula') ||
+        norm.includes('documento')
+      ) {
         headerRowIdx = i;
         break;
       }
@@ -336,48 +485,93 @@ export function processIncidencias(rawRows, year, monthIdx = null, quincena = nu
   }
 
   if (headerRowIdx === -1) {
-    console.error('Cabecera "COD MELÉ" no encontrada en ninguna fila.');
+    console.error('Cabecera "COD MELÉ" o similar no encontrada en ninguna fila.');
     throw new Error('No se encontró la cabecera "COD MELÉ" en el archivo.');
   }
 
   console.log('Fila cabecera encontrada en índice:', headerRowIdx);
   const headerRow = rawRows[headerRowIdx];
 
-  // 2. Localizar el inicio de las columnas de fecha: primera columna después de "DIAS LIBRES".
-  let dateStartCol = COL.DIAS_LIBRES + 1;
+  // 2. Mapeo dinámico de columnas según los encabezados encontrados
+  const colMap = { ...DEFAULT_COLS };
   for (let c = 0; c < headerRow.length; c++) {
-    if (normalizeText(headerRow[c]).includes('dias libres')) {
-      dateStartCol = c + 1;
-      break;
+    const cellVal = headerRow[c];
+    if (cellVal === undefined || cellVal === null) continue;
+    const norm = normalizeText(cellVal).replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+    if (norm.includes('cod mel') || norm.includes('codigo') || norm === 'cod') {
+      colMap.CODIGO = c;
+    } else if (norm.includes('cedula') || norm === 'ci' || norm.includes('documento')) {
+      colMap.CEDULA = c;
+    } else if (
+      norm.includes('nombre') ||
+      norm.includes('apellido') ||
+      norm.includes('colaborador') ||
+      norm.includes('trabajador')
+    ) {
+      colMap.NOMBRE = c;
+    } else if (norm.includes('cargo') || norm.includes('puesto') || norm.includes('rol')) {
+      colMap.CARGO = c;
+    } else if (norm.includes('departamento') || norm.includes('depto') || norm.includes('area')) {
+      colMap.DEPARTAMENTO = c;
+    } else if (
+      norm.includes('sucursal') ||
+      norm.includes('tienda') ||
+      norm.includes('sede') ||
+      norm.includes('ubicacion')
+    ) {
+      colMap.SUCURSAL = c;
+    } else if (norm.includes('turno')) {
+      colMap.TURNO = c;
+    } else if (
+      norm.includes('dias libres') ||
+      norm.includes('dia libre') ||
+      norm === 'libres'
+    ) {
+      colMap.DIAS_LIBRES = c;
     }
   }
 
-  // 3. Determinar la fila que realmente contiene las fechas (normalmente la misma fila de cabecera).
+  // 3 y 4. Determinar dinámicamente la fila de fechas y la columna de inicio de fechas
+  let dateStartCol = -1;
   let dateRow = null;
   let dateRowIdx = -1;
+
   const candidateRowIndices = [headerRowIdx, headerRowIdx + 1, headerRowIdx - 1];
   for (const idx of candidateRowIndices) {
     if (idx >= 0 && idx < rawRows.length) {
       const row = rawRows[idx];
-      const cellVal = row[dateStartCol];
-      if (cellVal !== undefined && cellVal !== null && cellVal !== '') {
-        const parsed = parseHeaderDate(cellVal, year, monthIdx);
+      for (let c = 3; c < row.length; c++) {
+        const parsed = parseHeaderDate(row[c], year, monthIdx);
         if (parsed) {
-          dateRow = row;
-          dateRowIdx = idx;
-          break;
+          if (dateStartCol === -1 || c < dateStartCol) {
+            dateStartCol = c;
+            dateRow = row;
+            dateRowIdx = idx;
+            break;
+          }
         }
       }
     }
   }
-  if (!dateRow) {
-    console.warn('No se detectó fila de fecha automáticamente. Usando la fila de cabecera.');
+
+  if (dateStartCol === -1) {
+    for (let c = 0; c < headerRow.length; c++) {
+      const norm = normalizeText(headerRow[c]);
+      if (norm.includes('dias libres') || norm.includes('dia libre')) {
+        dateStartCol = c + 1;
+        break;
+      }
+    }
+    if (dateStartCol === -1) {
+      dateStartCol = colMap.DIAS_LIBRES + 1;
+    }
     dateRow = headerRow;
     dateRowIdx = headerRowIdx;
   }
   console.log('Fila de fechas detectada en índice:', dateRowIdx, '| Columna de inicio de fechas:', dateStartCol);
 
-  // 4. Extraer las fechas válidas de las columnas de asistencia, filtradas por el corte quincenal.
+  // 5. Extraer las fechas válidas filtradas por el corte quincenal
   const columnDates = [];
   let startDay = null;
   let endDay = null;
@@ -410,60 +604,42 @@ export function processIncidencias(rawRows, year, monthIdx = null, quincena = nu
   console.log('Total columnas de fecha válidas que pasaron filtros:', columnDates.length);
 
   const feriadosSet = new Set(feriadosList);
-  const unrecognizedConcepts = new Set();
 
-  // 5. Recorrer cada fila de empleado una sola vez y, dentro de ella, cada columna de fecha.
+  // 6. Recorrer cada fila de colaborador y procesar las incidencias
   for (let r = Math.max(headerRowIdx, dateRowIdx) + 1; r < rawRows.length; r++) {
     const row = rawRows[r];
     if (!row) continue;
 
-    const employeeCode = String(row[COL.CODIGO] || '').trim();
-    if (!employeeCode) continue; // Fila vacía o sin código
+    let employeeCode = String(row[colMap.CODIGO] || '').trim();
+    if (!employeeCode && colMap.CODIGO !== DEFAULT_COLS.CODIGO) {
+      employeeCode = String(row[DEFAULT_COLS.CODIGO] || '').trim();
+    }
+    const cedula = String(row[colMap.CEDULA] || '').trim();
+    if (!employeeCode && !cedula) continue;
 
-    const rawSucursal = String(row[COL.SUCURSAL] || '').trim();
-    const mappedSucursal = determineSucursal(rawSucursal);
-    if (!result[mappedSucursal]) continue; // Sucursal desconocida, seguridad extra
+    if (!employeeCode) employeeCode = cedula;
 
-    const cedula = String(row[COL.CEDULA] || '').trim();
-    const employeeName = String(row[COL.NOMBRE] || '').trim();
-    const cargo = String(row[COL.CARGO] || '').trim();
-    const rules = CONCEPT_RULES[mappedSucursal];
+    const rawSucursal = String(row[colMap.SUCURSAL] || '').trim();
+    const mappedSucursal = determineSucursal(rawSucursal, sucursales);
+
+    if (!result[mappedSucursal]) continue;
+
+    // Obtener la configuración de bonos de esta sucursal
+    const sucursalConfig = sucursales.find(s => s.name === mappedSucursal);
+
+    const employeeName = String(row[colMap.NOMBRE] || '').trim();
+    const cargo = String(row[colMap.CARGO] || '').trim();
 
     for (const colDate of columnDates) {
       const cellValue = String(row[colDate.colIdx] || '').trim();
       if (!cellValue) continue;
 
-      const norm = normalizeText(cellValue);
-      if (!norm || SKIP_CONCEPTS.has(norm)) continue;
-
-      const rule = rules[norm];
-      if (!rule) {
-        unrecognizedConcepts.add(`${mappedSucursal} :: "${cellValue}"`);
-        continue;
-      }
-
       const formattedDate = formatDateString(colDate.date);
       const isoDateString = getLocalISODate(colDate.date);
       const isSunday = colDate.date.getDay() === 0;
-      const dailyIncidences = [];
+      const isFeriado = feriadosSet.has(isoDateString);
 
-      if (rule.ausencia) {
-        dailyIncidences.push({ type: rule.ausencia, value: 1 });
-      } else {
-        let bonoValue = 0;
-        if (rule.bonoWeekday !== undefined) {
-          bonoValue = isSunday ? rule.bonoSunday : rule.bonoWeekday;
-        } else if (rule.bono !== undefined) {
-          bonoValue = rule.bono;
-        }
-        if (bonoValue > 0) {
-          dailyIncidences.push({ type: 'BONO NOCTURNO', value: bonoValue });
-        }
-        if (rule.domingoFeriado) {
-          if (isSunday) dailyIncidences.push({ type: 'DOMINGO', value: 1 });
-          if (feriadosSet.has(isoDateString)) dailyIncidences.push({ type: 'FERIADO', value: 1 });
-        }
-      }
+      const dailyIncidences = evaluateDailyStatus(cellValue, sucursalConfig, isSunday, isFeriado);
 
       for (const inc of dailyIncidences) {
         result[mappedSucursal].push({
@@ -479,10 +655,6 @@ export function processIncidencias(rawRows, year, monthIdx = null, quincena = nu
         });
       }
     }
-  }
-
-  if (unrecognizedConcepts.size > 0) {
-    console.warn('Conceptos no reconocidos (no generaron incidencia):', Array.from(unrecognizedConcepts));
   }
 
   return result;

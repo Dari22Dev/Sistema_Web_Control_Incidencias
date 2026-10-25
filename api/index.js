@@ -17,35 +17,10 @@ let ID_INCIDENCIA_COUNTER = 1;
 let tablaCortes = [];
 let tablaIncidencias = [];
 
-// --- AUTENTICACIÓN Y SEGURIDAD ---
-const MASTER_USER = 'Daridev';
-const MASTER_PASS = 'Draca29*';
-const MASTER_TOKEN = 'session_token_master_2026';
-
-// Middleware de Autenticación
-const requireAuth = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  if (authHeader === MASTER_TOKEN) {
-    next();
-  } else {
-    res.status(401).json({ error: 'Sesión inválida o expirada. Por favor inicie sesión.' });
-  }
-};
-
-// Ruta de Login
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  if (username === MASTER_USER && password === MASTER_PASS) {
-    res.json({ success: true, token: MASTER_TOKEN });
-  } else {
-    res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
-  }
-});
-
-// --- RUTAS DE LA API (MOCK CON ARRAYS) ---
+// --- RUTAS DE LA API ---
 
 // Guardar un nuevo corte y sus registros
-app.post('/api/cortes', requireAuth, async (req, res) => {
+app.post('/api/cortes', async (req, res) => {
   const { filename, year, month, quincena, feriados, incidencias } = req.body;
 
   if (!year || month === undefined || !quincena || !incidencias) {
@@ -55,7 +30,6 @@ app.post('/api/cortes', requireAuth, async (req, res) => {
   try {
     const corteId = ID_CORTE_COUNTER++;
 
-    // Crear el registro del corte simulando SQLite
     const nuevoCorte = {
       id: corteId,
       filename: filename || 'Cálculo Manual',
@@ -97,9 +71,8 @@ app.post('/api/cortes', requireAuth, async (req, res) => {
 });
 
 // Obtener todos los cortes históricos (resumen)
-app.get('/api/cortes', requireAuth, async (req, res) => {
+app.get('/api/cortes', async (req, res) => {
   try {
-    // Mapeamos los cortes y calculamos el total de registros en memoria
     const formattedRows = tablaCortes.map(corte => {
       const totalRegistros = tablaIncidencias.filter(inc => inc.corte_id === corte.id).length;
       return {
@@ -117,7 +90,7 @@ app.get('/api/cortes', requireAuth, async (req, res) => {
 });
 
 // Obtener detalles de un corte por ID
-app.get('/api/cortes/:id', requireAuth, async (req, res) => {
+app.get('/api/cortes/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const corte = tablaCortes.find(c => c.id === parseInt(id));
@@ -137,14 +110,12 @@ app.get('/api/cortes/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Eliminar un corte histórico (Simula ON DELETE CASCADE)
-app.delete('/api/cortes/:id', requireAuth, async (req, res) => {
+// Eliminar un corte histórico
+app.delete('/api/cortes/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const corteIdInt = parseInt(id);
-    // Eliminar el corte
     tablaCortes = tablaCortes.filter(c => c.id !== corteIdInt);
-    // Eliminar sus incidencias asociadas
     tablaIncidencias = tablaIncidencias.filter(inc => inc.corte_id !== corteIdInt);
 
     res.json({ success: true });
@@ -154,9 +125,15 @@ app.delete('/api/cortes/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Servir el frontend compilado
+app.use(express.static(path.join(__dirname, '../dist')));
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`Servidor en memoria corriendo en puerto ${PORT}`);
+  console.log(`Servidor corriendo en puerto ${PORT}`);
 });
 
 export default app;

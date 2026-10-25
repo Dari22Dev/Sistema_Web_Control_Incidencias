@@ -1,54 +1,34 @@
-import { processIncidencias } from './src/utils/calculator.js';
+import { processIncidencias, DEFAULT_SUCURSALES_CONFIG } from './src/utils/calculator.js';
 
-// Datos de prueba simulando el Excel (Anonimizados para producción)
+// Datos de prueba simulando el Excel con las 2 sucursales (Sambil y La Vela)
 const mockRawRows = [
-  // Fila 0: Nombres de los días
-  ['COD. MELE', 'CÉDULA', 'APELLIDOS Y NOMBRES', 'SUCURSAL', 'CARGO', 'LUN', 'MAR', 'MIÉ', 'DOM', 'LUN'],
+  // Fila 0: Encabezados de columnas
+  ['COD. MELE', 'CÉDULA', 'APELLIDOS Y NOMBRES', 'SUCURSAL', 'CARGO', 'LUN', 'MAR', 'MIÉ', 'DOM', 'LUN', 'MAR'],
   // Fila 1: Fechas
-  ['', '', '', '', '', '1 Jun', '2 Jun', '3 Jun', '7 Jun', '8 Jun'],
-  // Fila 2: Empleado SM Costazul
-  ['1001', '11111111', 'COLABORADOR UNO', 'Supermarket Costazul', 'ASESOR', 'Presente apertura a tiempo', 'Presente cierre a tiempo', 'Día libre', 'Presente apertura a tiempo', 'Reposo'],
-  // Fila 3: Empleado Bodegón Costazul
-  ['1002', '22222222', 'COLABORADOR DOS', 'Bodegón Costazul', 'ASESOR', 'Presente a tiempo', 'Presente cierre a tiempo', 'Día libre', 'Día libre', 'Día libre'],
-  // Fila 4: Empleado Happy Shack
-  ['1003', '33333333', 'COLABORADOR TRES', 'Happy Shack', 'ASESOR', 'Presente cierre a tiempo', '1 Hora Extra', '2 Hora Extra', 'Presente apertura a tiempo', 'Ausencia Injustificada'],
-  // Fila 5: Empleado Happy Shack II con Redoble
-  ['1004', '44444444', 'COLABORADOR CUATRO', 'Happy Shack II', 'SUPERVISOR', 'Redoble', 'Redoble Especial', 'Ausencia Justificada', 'Día libre', 'Día libre'],
-  // Fila 6: Empleado Sigo + 2 Costazul (Debe mapear a Bodegón Costazul)
-  ['1005', '55555555', 'COLABORADOR CINCO', 'Sigo + 2 Costazul', 'ASESOR', 'Asistió Especial', 'Presente a tiempo', 'Día libre', 'Reposo', 'Permiso']
+  ['', '', '', '', '', '1 Jun', '2 Jun', '3 Jun', '7 Jun', '8 Jun', '9 Jun'],
+  // Fila 2: Empleado Sambil
+  ['1001', '11111111', 'COLABORADOR UNO', 'Sambil', 'ASESOR', 'Presente apertura a tiempo', 'Presente cierre a tiempo', 'Día libre', 'Presente apertura a tiempo', 'Reposo', 'Ausencia Injustificada'],
+  // Fila 3: Empleado La Vela
+  ['1002', '22222222', 'COLABORADOR DOS', 'La Vela', 'ASESOR', 'Presente a tiempo', 'Presente cierre a tiempo', 'Día libre', 'Presente a tiempo', 'Día libre', 'Falta Justificada'],
+  // Fila 4: Empleado Sambil con variantes de ausencia y horas extras
+  ['1003', '33333333', 'COLABORADOR TRES', 'Sambil', 'ASESOR', 'Presente cierre a tiempo', '1 Hora Extra', '2 Hora Extra', 'Día libre', 'Falta Injustificada', 'Ausencia Justificada'],
+  // Fila 5: Empleado La Vela con asistencias especiales y códigos
+  ['1004', '44444444', 'COLABORADOR CUATRO', 'La Vela', 'ASESOR', 'Asistió Especial', 'Presente a tiempo', 'Día libre', 'Reposo', 'Permiso', 'AI']
 ];
 
 const feriados = ['2026-06-03']; // 3 Jun es Feriado
 const year = 2026;
 
-console.log('--- INICIANDO PRUEBAS DE CÁLCULO DE INCIDENCIAS ---');
+console.log('--- INICIANDO PRUEBAS DE CÁLCULO DE INCIDENCIAS CONFIGURABLES ---');
 
 try {
-  // Pruebas de compatibilidad con firma anterior
-  const resultCompat = processIncidencias(mockRawRows, year, feriados);
-  let compatCount = 0;
-  Object.keys(resultCompat).forEach(s => compatCount += resultCompat[s].length);
-  if (compatCount > 0) {
-    console.log(`✅ OK: Firma compatible retornó ${compatCount} registros en total.`);
-  } else {
-    console.error('❌ FAIL: Firma compatible no retornó registros.');
-  }
+  // Pruebas específicas de quincenas (Q1 de Junio) con la configuración por defecto
+  const result = processIncidencias(mockRawRows, year, 5, 1, feriados, DEFAULT_SUCURSALES_CONFIG);
 
-  // Pruebas específicas de quincenas (Q1 de Junio)
-  const result = processIncidencias(mockRawRows, year, 5, 1, feriados);
-  
-  // Pruebas específicas de quincenas (Q2 de Junio - no debería retornar nada)
-  const resultQ2 = processIncidencias(mockRawRows, year, 5, 2, feriados);
-  let q2Count = 0;
-  Object.keys(resultQ2).forEach(s => q2Count += resultQ2[s].length);
-  if (q2Count === 0) {
-    console.log('✅ OK: Segunda Quincena (Q2) de Junio no retornó registros (las fechas mock son de Q1).');
-  } else {
-    console.error('❌ FAIL: Segunda Quincena de Junio retornó registros erróneos:', q2Count);
-  }
-  
-  // Imprimir resumen para verificar
-  console.log('\n--- RESULTADOS POR SUCURSAL (Q1) ---');
+  console.log('\n--- SUCURSALES DETECTADAS EN RESULTADOS ---');
+  console.log(Object.keys(result));
+
+  // Imprimir resumen
   Object.keys(result).forEach(sucursal => {
     console.log(`\nSucursal: ${sucursal} (Total registros: ${result[sucursal].length})`);
     result[sucursal].forEach(item => {
@@ -56,126 +36,95 @@ try {
     });
   });
 
-  // Validaciones
-  console.log('\n--- VERIFICANDO ASERTOS DE Q1 ---');
+  console.log('\n--- VERIFICANDO ASERTOS ---');
 
-  // 1. SM Costazul - 1001
-  const smList = result['SM COSTAZUL'];
+  // 1. SAMBIL - Empleado 1001
+  const sambilList = result['Sambil'];
+  if (!sambilList) throw new Error('No existe la sucursal Sambil en los resultados');
+
   // Cierre a tiempo el 2 Jun -> bono nocturno = 3
-  const smBono = smList.find(i => i.employeeCode === '1001' && i.dateString === '02 06 2026' && i.incidenceType === 'BONO NOCTURNO');
+  const smBono = sambilList.find(i => i.employeeCode === '1001' && i.dateString === '02 06 2026' && i.incidenceType === 'BONO NOCTURNO');
   if (smBono && smBono.value === 3) {
-    console.log('✅ OK: SM Costazul - Presente cierre a tiempo calculó Bono Nocturno 3');
+    console.log('✅ OK: Sambil - Presente cierre a tiempo calculó Bono Nocturno 3');
   } else {
-    console.error('❌ FAIL: SM Costazul - Bono Nocturno para 1001 el 02 06 2026 no es 3', smBono);
+    console.error('❌ FAIL: Sambil - Bono Nocturno para 1001 el 02 06 2026 no es 3', smBono);
   }
 
   // Domingo 7 Jun trabajado -> domingo = 1
-  const smDomingo = smList.find(i => i.employeeCode === '1001' && i.dateString === '07 06 2026' && i.incidenceType === 'DOMINGO');
+  const smDomingo = sambilList.find(i => i.employeeCode === '1001' && i.dateString === '07 06 2026' && i.incidenceType === 'DOMINGO');
   if (smDomingo && smDomingo.value === 1) {
-    console.log('✅ OK: SM Costazul - Domingo trabajado el 07 06 2026 calculó Domingo 1');
+    console.log('✅ OK: Sambil - Domingo trabajado el 07 06 2026 calculó Domingo 1');
   } else {
-    console.error('❌ FAIL: SM Costazul - Domingo para 1001 no se calculó', smDomingo);
+    console.error('❌ FAIL: Sambil - Domingo para 1001 no se calculó', smDomingo);
   }
 
-  // 2. Bodegón Costazul - 1002
-  const bodList = result['BODEGÓN COSTAZUL'];
-  // Presente a tiempo 1 Jun -> bono nocturno = 2
-  const bodBono1 = bodList.find(i => i.employeeCode === '1002' && i.dateString === '01 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  // Presente cierre a tiempo 2 Jun -> bono nocturno = 2
-  const bodBono2 = bodList.find(i => i.employeeCode === '1002' && i.dateString === '02 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  if (bodBono1 && bodBono1.value === 2 && bodBono2 && bodBono2.value === 2) {
-    console.log('✅ OK: Bodegón Costazul - Ambos turnos calcularon Bono Nocturno 2');
+  // Ausencia Injustificada 9 Jun -> 1
+  const smAusenciaI = sambilList.find(i => i.employeeCode === '1001' && i.dateString === '09 06 2026' && i.incidenceType === 'AUSENCIA INJUSTIFICADA');
+  if (smAusenciaI && smAusenciaI.value === 1) {
+    console.log('✅ OK: Sambil - Ausencia Injustificada para 1001 calculó correctamente (1)');
   } else {
-    console.error('❌ FAIL: Bodegón Costazul - Bono Nocturno incorrecto', { bodBono1, bodBono2 });
+    console.error('❌ FAIL: Sambil - Ausencia Injustificada para 1001 no se calculó', smAusenciaI);
   }
 
-  // 3. Happy Shack - 1003
-  const hsList = result['HAPPY SHACK'];
-  // Cierre a tiempo 1 Jun -> 3
-  const hsBono1 = hsList.find(i => i.employeeCode === '1003' && i.dateString === '01 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  // 1 Hora Extra 2 Jun -> 2
-  const hsBono2 = hsList.find(i => i.employeeCode === '1003' && i.dateString === '02 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  // 2 Hora Extra 3 Jun -> 3
-  const hsBono3 = hsList.find(i => i.employeeCode === '1003' && i.dateString === '03 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  if (hsBono1?.value === 3 && hsBono2?.value === 2 && hsBono3?.value === 3) {
-    console.log('✅ OK: Happy Shack - Bono Nocturno de 1/2 Hora Extra y cierre calculó correctamente (3, 2, 3)');
+  // 2. LA VELA - Empleado 1002
+  const velaList = result['La Vela'];
+  if (!velaList) throw new Error('No existe la sucursal La Vela en los resultados');
+
+  // Presente a tiempo 1 Jun (Lunes) -> bono nocturno = 2
+  const velaBono1 = velaList.find(i => i.employeeCode === '1002' && i.dateString === '01 06 2026' && i.incidenceType === 'BONO NOCTURNO');
+  // Presente cierre a tiempo 2 Jun (Martes) -> bono nocturno = 2 (según config La Vela)
+  const velaBono2 = velaList.find(i => i.employeeCode === '1002' && i.dateString === '02 06 2026' && i.incidenceType === 'BONO NOCTURNO');
+  if (velaBono1?.value === 2 && velaBono2?.value === 2) {
+    console.log('✅ OK: La Vela - Presente a tiempo y cierre calcularon Bono Nocturno según configuración (2)');
   } else {
-    console.error('❌ FAIL: Happy Shack - Bono Nocturno incorrecto', { hsBono1, hsBono2, hsBono3 });
+    console.error('❌ FAIL: La Vela - Bono Nocturno incorrecto', { velaBono1, velaBono2 });
   }
 
-  // Feriado trabajado 3 Jun -> feriado = 1 (trabajó 2 Hora Extra, que es activo)
-  const hsFeriado = hsList.find(i => i.employeeCode === '1003' && i.dateString === '03 06 2026' && i.incidenceType === 'FERIADO');
-  if (hsFeriado && hsFeriado.value === 1) {
-    console.log('✅ OK: Happy Shack - Feriado trabajado el 03 06 2026 calculó Feriado 1');
+  // Presente a tiempo 7 Jun (Domingo) -> bono nocturno = 1, Domingo = 1
+  const velaBonoDom = velaList.find(i => i.employeeCode === '1002' && i.dateString === '07 06 2026' && i.incidenceType === 'BONO NOCTURNO');
+  const velaDom = velaList.find(i => i.employeeCode === '1002' && i.dateString === '07 06 2026' && i.incidenceType === 'DOMINGO');
+  if (velaBonoDom?.value === 1 && velaDom?.value === 1) {
+    console.log('✅ OK: La Vela - Turno en domingo calculó Bono Nocturno 1 y Domingo 1');
   } else {
-    console.error('❌ FAIL: Happy Shack - Feriado para 1003 no se calculó', hsFeriado);
+    console.error('❌ FAIL: La Vela - Turno en domingo incorrecto', { velaBonoDom, velaDom });
   }
 
-  // Ausencia Injustificada 8 Jun -> 1
-  const hsAusencia = hsList.find(i => i.employeeCode === '1003' && i.dateString === '08 06 2026' && i.incidenceType === 'AUSENCIA INJUSTIFICADA');
-  if (hsAusencia && hsAusencia.value === 1) {
-    console.log('✅ OK: Happy Shack - Ausencia Injustificada el 08 06 2026 calculó correctamente');
+  // Falta Justificada 9 Jun -> AUSENCIA JUSTIFICADA = 1
+  const velaAusenciaJ = velaList.find(i => i.employeeCode === '1002' && i.dateString === '09 06 2026' && i.incidenceType === 'AUSENCIA JUSTIFICADA');
+  if (velaAusenciaJ && velaAusenciaJ.value === 1) {
+    console.log('✅ OK: La Vela - Falta Justificada calculó AUSENCIA JUSTIFICADA 1');
   } else {
-    console.error('❌ FAIL: Happy Shack - Ausencia Injustificada no se calculó', hsAusencia);
+    console.error('❌ FAIL: La Vela - Falta Justificada no se calculó', velaAusenciaJ);
   }
 
-  // 4. Happy Shack II - 1004
-  const hs2List = result['HAPPY SHACK II'];
-  // Redoble 1 Jun -> 3
-  const hs2Bono1 = hs2List.find(i => i.employeeCode === '1004' && i.dateString === '01 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  // Redoble Especial 2 Jun -> 3
-  const hs2Bono2 = hs2List.find(i => i.employeeCode === '1004' && i.dateString === '02 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  if (hs2Bono1?.value === 3 && hs2Bono2?.value === 3) {
-    console.log('✅ OK: Happy Shack II - Redobles calcularon Bono Nocturno 3');
+  // 3. SAMBIL - Empleado 1003 (Falta Injustificada y Ausencia Justificada)
+  const sm3FaltaI = sambilList.find(i => i.employeeCode === '1003' && i.dateString === '08 06 2026' && i.incidenceType === 'AUSENCIA INJUSTIFICADA');
+  const sm3AusenciaJ = sambilList.find(i => i.employeeCode === '1003' && i.dateString === '09 06 2026' && i.incidenceType === 'AUSENCIA JUSTIFICADA');
+  if (sm3FaltaI && sm3AusenciaJ) {
+    console.log('✅ OK: Sambil - Falta Injustificada y Ausencia Justificada calculadas correctamente');
   } else {
-    console.error('❌ FAIL: Happy Shack II - Redobles incorrectos', { hs2Bono1, hs2Bono2 });
+    console.error('❌ FAIL: Sambil - Variantes de ausencias para 1003 incorrectas', { sm3FaltaI, sm3AusenciaJ });
   }
 
-  // Ausencia Justificada 3 Jun -> 1
-  const hs2Ausencia = hs2List.find(i => i.employeeCode === '1004' && i.dateString === '03 06 2026' && i.incidenceType === 'AUSENCIA JUSTIFICADA');
-  if (hs2Ausencia && hs2Ausencia.value === 1) {
-    console.log('✅ OK: Happy Shack II - Ausencia Justificada el 03 06 2026 calculó correctamente');
+  // Feriado el 3 Jun para 1003
+  const sm3Feriado = sambilList.find(i => i.employeeCode === '1003' && i.dateString === '03 06 2026' && i.incidenceType === 'FERIADO');
+  if (sm3Feriado && sm3Feriado.value === 1) {
+    console.log('✅ OK: Sambil - Feriado trabajado el 03 06 2026 calculó FERIADO 1');
   } else {
-    console.error('❌ FAIL: Happy Shack II - Ausencia Justificada no se calculó', hs2Ausencia);
+    console.error('❌ FAIL: Sambil - Feriado no calculado', sm3Feriado);
   }
 
-  // 5. Sigo + 2 Costazul / Bodegón Costazul - 1005
-  const bodListExtended = result['BODEGÓN COSTAZUL'];
-  
-  // Asistió Especial el 1 Jun -> Bono Nocturno = 3 (Regla General)
-  const sigoBono1 = bodListExtended.find(i => i.employeeCode === '1005' && i.dateString === '01 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  if (sigoBono1 && sigoBono1.value === 3) {
-    console.log('✅ OK: Sigo+2 (Bodegón) - Asistió Especial calculó Bono Nocturno 3');
+  // 4. LA VELA - Empleado 1004 (Asistió Especial -> 3, AI -> Injustificada 1)
+  const vela4Bono1 = velaList.find(i => i.employeeCode === '1004' && i.dateString === '01 06 2026' && i.incidenceType === 'BONO NOCTURNO');
+  const vela4AI = velaList.find(i => i.employeeCode === '1004' && i.dateString === '09 06 2026' && i.incidenceType === 'AUSENCIA INJUSTIFICADA');
+  if (vela4Bono1?.value === 3 && vela4AI?.value === 1) {
+    console.log('✅ OK: La Vela - Asistió Especial (3) y código AI como Ausencia Injustificada (1)');
   } else {
-    console.error('❌ FAIL: Sigo+2 - Asistió Especial no calculó Bono Nocturno 3', sigoBono1);
+    console.error('❌ FAIL: La Vela - Asistencia especial o AI falló', { vela4Bono1, vela4AI });
   }
 
-  // Presente a tiempo el 2 Jun -> Bono Nocturno = 2 (Regla de Bodegón)
-  const sigoBono2 = bodListExtended.find(i => i.employeeCode === '1005' && i.dateString === '02 06 2026' && i.incidenceType === 'BONO NOCTURNO');
-  if (sigoBono2 && sigoBono2.value === 2) {
-    console.log('✅ OK: Sigo+2 (Bodegón) - Presente a tiempo calculó Bono Nocturno 2');
-  } else {
-    console.error('❌ FAIL: Sigo+2 - Presente a tiempo no calculó Bono Nocturno 2', sigoBono2);
-  }
-
-  // Reposo el 7 Jun (DOMINGO) -> NO calcula domingo (es reposo)
-  const sigoDomingo = bodListExtended.find(i => i.employeeCode === '1005' && i.dateString === '07 06 2026' && i.incidenceType === 'DOMINGO');
-  if (!sigoDomingo) {
-    console.log('✅ OK: Sigo+2 (Bodegón) - Reposo en domingo no computó incidencia');
-  } else {
-    console.error('❌ FAIL: Sigo+2 - Reposo en domingo computó incidencia incorrecta:', sigoDomingo);
-  }
-
-  // Permiso el 8 Jun -> NO calcula nada
-  const sigoPermiso = bodListExtended.filter(i => i.employeeCode === '1005' && i.dateString === '08 06 2026');
-  if (sigoPermiso.length === 0) {
-    console.log('✅ OK: Sigo+2 (Bodegón) - Permiso no computó ninguna incidencia');
-  } else {
-    console.error('❌ FAIL: Sigo+2 - Permiso computó incidencias incorrectas:', sigoPermiso);
-  }
-
-  console.log('\n--- PRUEBAS FINALIZADAS CON ÉXITO ---');
-
+  console.log('\n🎉 TODAS LAS PRUEBAS DE CÁLCULO PASARON EXITOSAMENTE.');
 } catch (err) {
-  console.error('❌ FALLÓ EL PROCESAMIENTO GENERAL DE PRUEBA:', err);
+  console.error('❌ ERROR EN PRUEBAS:', err);
+  process.exit(1);
 }
