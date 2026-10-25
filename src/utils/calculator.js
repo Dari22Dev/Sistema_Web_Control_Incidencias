@@ -212,9 +212,31 @@ const DEFAULT_COLS = {
   DIAS_LIBRES: 7
 };
 
+export const SUGGESTED_INCIDENCIAS = [
+  { id: 'pres', name: 'Presente Regular', type: 'presente', value: 2, label: 'Presente / Regular (Bono 2)' },
+  { id: 'cier', name: 'Presente Cierre', type: 'cierre', value: 3, label: 'Turno Cierre (Bono 3)' },
+  { id: 'redo', name: 'Redoble / Asist. Especial', type: 'redoble', value: 3, label: 'Redoble / H. Extra (Bono 3)' },
+  { id: 'aper', name: 'Turno Apertura', type: 'apertura', value: 0, label: 'Turno Apertura (Bono 0)' },
+  { id: 'dom',  name: 'Domingo Trabajado', type: 'domingo', value: 1, label: 'Domingo Trabajado (Bono 1)' },
+  { id: 'fer',  name: 'Feriado Trabajado', type: 'feriado', value: 1, label: 'Día Feriado (Valor 1)' },
+  { id: 'aj',   name: 'Ausencia Justificada', type: 'ausenciaJustificada', value: 1, label: 'Ausencia Justificada (Valor 1)' },
+  { id: 'ai',   name: 'Ausencia Injustificada', type: 'ausenciaInjustificada', value: 1, label: 'Ausencia Injustificada (Valor 1)' },
+  { id: 'rep',  name: 'Reposo Médico', type: 'reposo', value: 1, label: 'Reposo Médico (Valor 1)' }
+];
+
 export const DEFAULT_SUCURSALES_CONFIG = [
   {
     name: 'Sambil',
+    incidenciasList: [
+      { id: '1', name: 'Turno Cierre', type: 'cierre', value: 3 },
+      { id: '2', name: 'Redoble / Asist. Especial', type: 'redoble', value: 3 },
+      { id: '3', name: 'Presente Regular', type: 'presente', value: 2 },
+      { id: '4', name: 'Turno Apertura', type: 'apertura', value: 0 },
+      { id: '5', name: 'Domingos Trabajados', type: 'domingo', value: 2 },
+      { id: '6', name: 'Feriados Trabajados', type: 'feriado', value: 1 },
+      { id: '7', name: 'Ausencias Justificadas', type: 'ausenciaJustificada', value: 1 },
+      { id: '8', name: 'Ausencias Injustificadas', type: 'ausenciaInjustificada', value: 1 }
+    ],
     incidencias: {
       cierre: true,
       redoble: true,
@@ -239,6 +261,16 @@ export const DEFAULT_SUCURSALES_CONFIG = [
   },
   {
     name: 'La Vela',
+    incidenciasList: [
+      { id: '1', name: 'Turno Cierre', type: 'cierre', value: 2 },
+      { id: '2', name: 'Redoble / Asist. Especial', type: 'redoble', value: 3 },
+      { id: '3', name: 'Presente Regular', type: 'presente', value: 2 },
+      { id: '4', name: 'Turno Apertura', type: 'apertura', value: 0 },
+      { id: '5', name: 'Domingos Trabajados', type: 'domingo', value: 1 },
+      { id: '6', name: 'Feriados Trabajados', type: 'feriado', value: 1 },
+      { id: '7', name: 'Ausencias Justificadas', type: 'ausenciaJustificada', value: 1 },
+      { id: '8', name: 'Ausencias Injustificadas', type: 'ausenciaInjustificada', value: 1 }
+    ],
     incidencias: {
       cierre: true,
       redoble: true,
@@ -264,6 +296,47 @@ export const DEFAULT_SUCURSALES_CONFIG = [
 ];
 
 /**
+ * Normaliza la configuración de sucursal para que acepte tanto la estructura
+ * plana histórica como la lista dinámica de incidencias personalizadas `incidenciasList`.
+ */
+export function normalizeConfig(sucursalConfig) {
+  if (!sucursalConfig) return {};
+  const cfg = { ...sucursalConfig };
+
+  if (Array.isArray(cfg.incidenciasList) && cfg.incidenciasList.length > 0) {
+    const list = cfg.incidenciasList;
+    cfg.incidencias = {
+      cierre: list.some(i => i.type === 'cierre'),
+      redoble: list.some(i => i.type === 'redoble'),
+      presente: list.some(i => i.type === 'presente'),
+      apertura: list.some(i => i.type === 'apertura'),
+      domingo: list.some(i => i.type === 'domingo'),
+      feriado: list.some(i => i.type === 'feriado'),
+      ausenciaJustificada: list.some(i => i.type === 'ausenciaJustificada'),
+      ausenciaInjustificada: list.some(i => i.type === 'ausenciaInjustificada'),
+      reposo: list.some(i => i.type === 'reposo')
+    };
+
+    const getItemVal = (type, fallback) => {
+      const found = list.find(i => i.type === type);
+      return found !== undefined && found.value !== '' ? Number(found.value) : fallback;
+    };
+
+    cfg.bonoCierre = getItemVal('cierre', cfg.bonoCierre ?? 3);
+    cfg.bonoRedoble = getItemVal('redoble', cfg.bonoRedoble ?? 3);
+    cfg.bonoPresente = getItemVal('presente', cfg.bonoPresente ?? 2);
+    cfg.bonoApertura = getItemVal('apertura', cfg.bonoApertura ?? 0);
+    cfg.bonoDomingo = getItemVal('domingo', cfg.bonoDomingo ?? 1);
+    cfg.valorFeriado = getItemVal('feriado', cfg.valorFeriado ?? 1);
+    cfg.valorAusenciaJ = getItemVal('ausenciaJustificada', cfg.valorAusenciaJ ?? 1);
+    cfg.valorAusenciaI = getItemVal('ausenciaInjustificada', cfg.valorAusenciaI ?? 1);
+    cfg.valorReposo = getItemVal('reposo', cfg.valorReposo ?? 1);
+  }
+
+  return cfg;
+}
+
+/**
  * Evalúa el estatus diario para una sucursal dada y genera las incidencias correspondientes.
  * Cuenta de forma exhaustiva y precisa:
  * - AUSENCIAS JUSTIFICADAS
@@ -272,8 +345,7 @@ export const DEFAULT_SUCURSALES_CONFIG = [
  * - BONO NOCTURNO (con valor configurable por tipo de turno)
  * - DOMINGOS TRABAJADOS
  * - FERIADOS TRABAJADOS
- *
- * Cada incidencia se activa/desactiva y se valoriza según la configuración de la sucursal.
+ * - INCIDENCIAS PERSONALIZADAS
  *
  * @param {string} cellValue - Valor de la celda del Excel.
  * @param {Object} sucursalConfig - Configuración de la sucursal.
@@ -290,7 +362,7 @@ export function evaluateDailyStatus(cellValue, sucursalConfig, isSunday, isFeria
   const norm = normalizeText(raw);
   const cleanAlpha = norm.replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim();
 
-  const cfg = sucursalConfig || {};
+  const cfg = normalizeConfig(sucursalConfig);
   const enabled = cfg.incidencias || {
     cierre: true,
     redoble: true,
@@ -313,6 +385,18 @@ export function evaluateDailyStatus(cellValue, sucursalConfig, isSunday, isFeria
   const valorFeriado   = Number(cfg.valorFeriado ?? 1);
   const valorDomingo   = Number(cfg.valorDomingo ?? 1);
   const valorReposo    = Number(cfg.valorReposo ?? 1);
+
+  // 0. Búsqueda de coincidencia con incidencias personalizadas agregadas por el usuario
+  if (Array.isArray(cfg.incidenciasList)) {
+    const customMatch = cfg.incidenciasList.find(i =>
+      i.type === 'custom' &&
+      i.name &&
+      cleanAlpha.includes(normalizeText(i.name))
+    );
+    if (customMatch) {
+      return [{ type: customMatch.name.toUpperCase(), value: Number(customMatch.value || 1) }];
+    }
+  }
 
   // Manejo de Reposo
   if (cleanAlpha.includes('reposo')) {

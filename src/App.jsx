@@ -17,9 +17,13 @@ import {
   Moon,
   Settings,
   Building2,
-  ChevronLeft
+  ChevronLeft,
+  BookOpen,
+  HelpCircle,
+  X,
+  Check
 } from 'lucide-react';
-import { processIncidencias, DEFAULT_SUCURSALES_CONFIG } from './utils/calculator';
+import { processIncidencias, DEFAULT_SUCURSALES_CONFIG, SUGGESTED_INCIDENCIAS, normalizeConfig } from './utils/calculator';
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -96,7 +100,7 @@ function CustomDropdown({ label, value, options, onChange, disabled }) {
         onClick={() => !disabled && setIsOpen(!isOpen)}
         style={{
           width: '100%',
-          background: disabled ? 'rgba(0,0,0,0.08)' : 'var(--bg-input)',
+          background: disabled ? 'var(--surface-muted)' : 'var(--bg-input)',
           border: '1px solid var(--border)',
           borderRadius: '10px',
           padding: '0.75rem 1rem',
@@ -148,8 +152,8 @@ function CustomDropdown({ label, value, options, onChange, disabled }) {
               onClick={() => { onChange(opt.value); setIsOpen(false); }}
               style={{
                 padding: '0.6rem 1rem',
-                color: opt.value === value ? 'var(--secondary)' : 'var(--text-dropdown, #ffffff)',
-                background: opt.value === value ? 'rgba(6, 182, 212, 0.1)' : 'transparent',
+                color: opt.value === value ? 'var(--primary-active)' : 'var(--text-primary)',
+                background: opt.value === value ? 'var(--primary-soft)' : 'transparent',
                 fontSize: '0.85rem',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -171,36 +175,14 @@ function CustomDropdown({ label, value, options, onChange, disabled }) {
 // ─── Footer ─────────────────────────────────────────────────────────────────
 function Footer() {
   return (
-    <footer style={{
-      marginTop: 'auto',
-      background: 'var(--bg-glass)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      border: '1px solid var(--border-glass)',
-      borderRadius: '20px',
-      padding: '1.25rem 2rem',
-      boxShadow: 'var(--glass-shadow)',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: '1rem',
-      width: '100%',
-      animation: 'fadeIn 0.5s ease',
-      position: 'relative',
-      zIndex: 10
-    }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-          Desarrollado por DariDev &copy; 2026
-        </span>
-        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-          Control de Incidencias • V.2
-        </span>
+    <footer>
+      <div className="footer-meta">
+        <span className="footer-brand">Desarrollado por DariDev &copy; 2026</span>
+        <span className="footer-version">Control de Incidencias · V.2</span>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Contacto:</span>
+      <div className="footer-contact">
+        <span className="footer-label">Contacto</span>
         <a
           href="https://wa.me/584161978651"
           target="_blank"
@@ -209,17 +191,17 @@ function Footer() {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '36px',
-            height: '36px',
+            width: '34px',
+            height: '34px',
             borderRadius: '50%',
-            background: 'rgba(37, 211, 102, 0.1)',
-            border: '1px solid rgba(37, 211, 102, 0.2)',
-            color: '#25D366',
-            textDecoration: 'none',
-            transition: 'all 0.3s ease'
+            background: 'rgba(37, 211, 102, 0.12)',
+            border: '1px solid rgba(37, 211, 102, 0.28)',
+            color: '#1FA855',
+            textDecoration: 'none'
           }}
           className="whatsapp-contact-link"
           title="Contactar por WhatsApp"
+          aria-label="Contactar por WhatsApp"
         >
           <svg style={{ width: '18px', height: '18px', fill: 'currentColor' }} viewBox="0 0 24 24">
             <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.023-5.101-2.885-6.968C16.63 1.97 14.152.946 11.517.946c-5.44 0-9.866 4.372-9.87 9.802 0 1.814.48 3.59 1.39 5.169l-.95 3.473 3.56-.934zM16.621 13.568c-.27-.135-1.597-.788-1.848-.88-.25-.091-.433-.135-.615.135-.183.27-.707.88-.867 1.062-.16.183-.32.203-.59.068-1.523-.762-2.482-1.282-3.44-2.933-.254-.438.254-.407.727-1.353.079-.162.04-.304-.02-.439-.06-.135-.513-1.233-.7-1.69-.183-.448-.37-.387-.514-.395-.133-.007-.285-.008-.438-.008-.153 0-.402.058-.613.286-.212.228-.809.79-.809 1.927 0 1.137.828 2.235.942 2.387.114.152 1.63 2.49 3.95 3.49.55.237 1.002.39 1.343.498.552.176 1.053.151 1.448.092.44-.066 1.353-.553 1.543-1.085.19-.53.19-.986.133-1.082-.057-.096-.212-.152-.482-.288z"/>
@@ -230,62 +212,447 @@ function Footer() {
   );
 }
 
-// ─── Pantalla de Configuración de Sucursales ────────────────────────────────
-function ConfigScreen({ onSave, existingConfig, onCancel, toggleTheme, theme }) {
-  const [sucursales, setSucursales] = useState(() => {
-    if (existingConfig && existingConfig.length > 0) {
-      return existingConfig.map(s => ({
-        ...DEFAULT_SUCURSAL_TEMPLATE,
-        ...s,
-        incidencias: {
-          ...DEFAULT_SUCURSAL_TEMPLATE.incidencias,
-          ...(s.incidencias || {})
-        }
-      }));
+// ─── Inicializador de Sucursal e Incidencias ────────────────────────────────
+function initSucursal(s, idx = 0) {
+  const base = {
+    ...DEFAULT_SUCURSAL_TEMPLATE,
+    ...s,
+    incidencias: {
+      ...DEFAULT_SUCURSAL_TEMPLATE.incidencias,
+      ...(s.incidencias || {})
     }
-    return DEFAULT_SUCURSALES_CONFIG.map(s => ({
-      ...DEFAULT_SUCURSAL_TEMPLATE,
-      ...s,
-      incidencias: {
-        ...DEFAULT_SUCURSAL_TEMPLATE.incidencias,
-        ...(s.incidencias || {})
-      }
-    }));
-  });
-
-  const handleNameChange = (idx, value) => {
-    setSucursales(prev => prev.map((s, i) => i === idx ? { ...s, name: value } : s));
   };
 
-  const handleToggleIncidencia = (idx, key) => {
+  let list = [];
+  if (Array.isArray(s.incidenciasList) && s.incidenciasList.length > 0) {
+    list = s.incidenciasList.map(item => ({ ...item }));
+  } else {
+    if (base.incidencias?.cierre !== false) list.push({ id: `cier_${idx}_1`, name: 'Turno Cierre', type: 'cierre', value: base.bonoCierre ?? 3 });
+    if (base.incidencias?.redoble !== false) list.push({ id: `redo_${idx}_2`, name: 'Redoble / Especial', type: 'redoble', value: base.bonoRedoble ?? 3 });
+    if (base.incidencias?.presente !== false) list.push({ id: `pres_${idx}_3`, name: 'Presente Regular', type: 'presente', value: base.bonoPresente ?? 2 });
+    if (base.incidencias?.apertura !== false) list.push({ id: `aper_${idx}_4`, name: 'Turno Apertura', type: 'apertura', value: base.bonoApertura ?? 0 });
+    if (base.incidencias?.domingo !== false) list.push({ id: `dom_${idx}_5`, name: 'Domingos Trabajados', type: 'domingo', value: base.bonoDomingo ?? 1 });
+    if (base.incidencias?.feriado !== false) list.push({ id: `fer_${idx}_6`, name: 'Feriados Trabajados', type: 'feriado', value: base.valorFeriado ?? 1 });
+    if (base.incidencias?.ausenciaJustificada !== false) list.push({ id: `aj_${idx}_7`, name: 'Ausencias Justificadas', type: 'ausenciaJustificada', value: base.valorAusenciaJ ?? 1 });
+    if (base.incidencias?.ausenciaInjustificada !== false) list.push({ id: `ai_${idx}_8`, name: 'Ausencias Injustificadas', type: 'ausenciaInjustificada', value: base.valorAusenciaI ?? 1 });
+    if (base.incidencias?.reposo === true) list.push({ id: `rep_${idx}_9`, name: 'Reposos Médicos', type: 'reposo', value: base.valorReposo ?? 1 });
+  }
+
+  return {
+    ...base,
+    incidenciasList: list
+  };
+}
+
+// ─── Modal Emergente de Bienvenida, Tutorial y Configuración Inicial ─────────
+function WelcomeTutorialModal({ isOpen, onClose, initialTab = 'tutorial', existingConfig, onSaveConfig }) {
+  if (!isOpen) return null;
+
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [sucursales, setSucursales] = useState(() => {
+    const list = existingConfig && existingConfig.length > 0 ? existingConfig : DEFAULT_SUCURSALES_CONFIG;
+    return list.map((s, idx) => initSucursal(s, idx));
+  });
+
+  const handleNameChange = (sucIdx, value) => {
+    setSucursales(prev => prev.map((s, i) => i === sucIdx ? { ...s, name: value } : s));
+  };
+
+  const handleIncidenceNameChange = (sucIdx, itemIdx, value) => {
     setSucursales(prev => prev.map((s, i) => {
-      if (i !== idx) return s;
-      const current = s.incidencias?.[key] !== false;
+      if (i !== sucIdx) return s;
+      const newList = [...s.incidenciasList];
+      newList[itemIdx] = { ...newList[itemIdx], name: value };
+      return { ...s, incidenciasList: newList };
+    }));
+  };
+
+  const handleIncidenceValueChange = (sucIdx, itemIdx, value) => {
+    const num = Number(value);
+    setSucursales(prev => prev.map((s, i) => {
+      if (i !== sucIdx) return s;
+      const newList = [...s.incidenciasList];
+      newList[itemIdx] = { ...newList[itemIdx], value: isNaN(num) ? 0 : num };
+      return { ...s, incidenciasList: newList };
+    }));
+  };
+
+  const handleRemoveIncidence = (sucIdx, itemIdx) => {
+    setSucursales(prev => prev.map((s, i) => {
+      if (i !== sucIdx) return s;
+      return { ...s, incidenciasList: s.incidenciasList.filter((_, idx) => idx !== itemIdx) };
+    }));
+  };
+
+  const handleAddCustomIncidence = (sucIdx) => {
+    setSucursales(prev => prev.map((s, i) => {
+      if (i !== sucIdx) return s;
       return {
         ...s,
-        incidencias: {
-          ...s.incidencias,
-          [key]: !current
-        }
+        incidenciasList: [
+          ...s.incidenciasList,
+          { id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`, name: 'Nueva Incidencia', type: 'custom', value: 1 }
+        ]
       };
     }));
   };
 
-  const handleValueChange = (idx, field, value) => {
+  const handleAddSuggestedIncidence = (sucIdx, sugg) => {
     setSucursales(prev => prev.map((s, i) => {
-      if (i !== idx) return s;
-      const num = Number(value);
-      return { ...s, [field]: isNaN(num) ? 0 : num };
+      if (i !== sucIdx) return s;
+      return {
+        ...s,
+        incidenciasList: [
+          ...s.incidenciasList,
+          { id: `${sugg.type}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`, name: sugg.name, type: sugg.type, value: sugg.value }
+        ]
+      };
+    }));
+  };
+
+  const handleAddBranch = () => {
+    setSucursales(prev => [
+      ...prev,
+      initSucursal({ name: `Sucursal ${prev.length + 1}` }, prev.length)
+    ]);
+  };
+
+  const handleRemoveBranch = (sucIdx) => {
+    if (sucursales.length <= 1) return;
+    setSucursales(prev => prev.filter((_, i) => i !== sucIdx));
+  };
+
+  const handleSaveAndStart = () => {
+    const valid = sucursales
+      .filter(s => s.name.trim() !== '')
+      .map(s => normalizeConfig(s));
+    
+    if (valid.length === 0) return;
+    localStorage.setItem('tutorial_viewed', 'true');
+    onSaveConfig(valid);
+    onClose();
+  };
+
+  return (
+    <div className="welcome-modal-overlay" onClick={onClose}>
+      <div className="welcome-modal" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="welcome-modal-header">
+          <div className="welcome-modal-title">
+            <div className="welcome-modal-icon">
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                Bienvenido al Control de Incidencias Laborales
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+                Sistema corporativo de cómputo y auditoría de asistencias
+              </p>
+            </div>
+          </div>
+          <button className="btn-action-delete" onClick={onClose} aria-label="Cerrar modal">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="welcome-modal-tabs">
+          <button
+            className={`welcome-modal-tab ${activeTab === 'tutorial' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tutorial')}
+          >
+            <BookOpen size={16} /> Guía y Tutorial de Uso
+          </button>
+          <button
+            className={`welcome-modal-tab ${activeTab === 'config' ? 'active' : ''}`}
+            onClick={() => setActiveTab('config')}
+          >
+            <Building2 size={16} /> Sedes e Incidencias ({sucursales.length})
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="welcome-modal-body">
+          {activeTab === 'tutorial' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div style={{ padding: '14px 18px', background: 'var(--surface-muted)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Bienvenido al sistema corporativo de <strong>Control de Incidencias</strong>. Este software audita automáticamente planillas quincenales, calculando bonos nocturnos, turnos especiales, feriados, domingos y ausencias de forma segura, rápida y con soporte multi-sede sin credenciales maestras.
+                </p>
+              </div>
+
+              <div className="tutorial-grid">
+                <div className="tutorial-step-card">
+                  <div className="tutorial-step-header">
+                    <span className="tutorial-step-number">1</span>
+                    <span className="tutorial-step-title">Carga de Planilla Excel</span>
+                  </div>
+                  <p className="tutorial-step-desc">
+                    Arrastra o selecciona el archivo <code>.xlsx</code> o <code>.xls</code> quincenal. El sistema reconocerá automáticamente colaboradores, cédulas, códigos y columnas de asistencia diaria.
+                  </p>
+                </div>
+
+                <div className="tutorial-step-card">
+                  <div className="tutorial-step-header">
+                    <span className="tutorial-step-number">2</span>
+                    <span className="tutorial-step-title">Período y Días Feriados</span>
+                  </div>
+                  <p className="tutorial-step-desc">
+                    Selecciona el año, mes y la quincena (1ra o 2da). Anexa las fechas de días feriados oficiales aplicables para que los turnos laborados se computen como feriados.
+                  </p>
+                </div>
+
+                <div className="tutorial-step-card">
+                  <div className="tutorial-step-header">
+                    <span className="tutorial-step-number">3</span>
+                    <span className="tutorial-step-title">Sedes e Incidencias</span>
+                  </div>
+                  <p className="tutorial-step-desc">
+                    Define las sucursales a trabajar (ej. Sambil, La Vela) y asigna tus propias incidencias y valores usando el botón <strong>+</strong> o las sugerencias rápidas.
+                  </p>
+                </div>
+
+                <div className="tutorial-step-card">
+                  <div className="tutorial-step-header">
+                    <span className="tutorial-step-number">4</span>
+                    <span className="tutorial-step-title">Auditoría y Exportación</span>
+                  </div>
+                  <p className="tutorial-step-desc">
+                    Revisa las métricas y tablas interactivas, audita o elimina registros individuales y genera el libro oficial de Excel con pestañas por sucursal o guárdalo en la base de datos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Configuración de Sucursales y Reglas de Incidencias
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    Ingresa las sucursales con las que vas a operar y define los nombres y valores de las incidencias.
+                  </p>
+                </div>
+                <button className="btn-add-branch" onClick={handleAddBranch} style={{ padding: '8px 14px', fontSize: '12.5px' }}>
+                  <Plus size={15} /> Agregar Sucursal
+                </button>
+              </div>
+
+              {sucursales.map((suc, sucIdx) => {
+                const hasFeriado = suc.incidenciasList.some(i => i.type === 'feriado' || i.name.toLowerCase().includes('feriado'));
+
+                return (
+                  <div key={sucIdx} className="config-sucursal-card" style={{ padding: '18px' }}>
+                    <div className="config-card-head" style={{ marginBottom: '14px' }}>
+                      <div className="config-card-title">
+                        <Building2 size={18} />
+                        <span>Sucursal #{sucIdx + 1}</span>
+                        <span className="config-count">{suc.name.trim() || 'Sin nombre'}</span>
+                      </div>
+                      {sucursales.length > 1 && (
+                        <button className="btn-danger-soft" onClick={() => handleRemoveBranch(sucIdx)}>
+                          <Trash2 size={13} /> Eliminar
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="config-group" style={{ marginBottom: '14px' }}>
+                      <label className="field-label">Nombre de la Sede / Sucursal *</label>
+                      <input
+                        type="text"
+                        className="input-text"
+                        placeholder="Ej: Sambil, La Vela, Tienda Centro..."
+                        value={suc.name}
+                        onChange={e => handleNameChange(sucIdx, e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <label className="field-label" style={{ marginBottom: 0 }}>
+                          Incidencias y Valores ({suc.incidenciasList.length})
+                        </label>
+                        <button
+                          type="button"
+                          className="btn-header"
+                          onClick={() => handleAddCustomIncidence(sucIdx)}
+                          style={{ fontSize: '12px', padding: '4px 10px' }}
+                        >
+                          <Plus size={14} /> Anexar Incidencia
+                        </button>
+                      </div>
+
+                      {suc.incidenciasList.length === 0 ? (
+                        <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                          No hay incidencias para esta sucursal. Haz clic en "Anexar Incidencia" o utiliza las sugerencias.
+                        </div>
+                      ) : (
+                        <div>
+                          {suc.incidenciasList.map((item, itemIdx) => (
+                            <div key={item.id || itemIdx} className="custom-incidence-row">
+                              <input
+                                type="text"
+                                className="input-text"
+                                style={{ height: '34px', fontSize: '13px' }}
+                                placeholder="Nombre de la incidencia (ej: Turno Cierre)"
+                                value={item.name}
+                                onChange={e => handleIncidenceNameChange(sucIdx, itemIdx, e.target.value)}
+                              />
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>VAL:</span>
+                                <input
+                                  type="number"
+                                  className="incidence-value-input"
+                                  style={{ height: '34px', width: '60px' }}
+                                  min="0"
+                                  max="20"
+                                  step="1"
+                                  value={item.value ?? 0}
+                                  onChange={e => handleIncidenceValueChange(sucIdx, itemIdx, e.target.value)}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-action-delete"
+                                onClick={() => handleRemoveIncidence(sucIdx, itemIdx)}
+                                title="Eliminar incidencia"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Sugerencias Rápidas */}
+                      <div className="suggestions-container">
+                        <span className="suggestions-title">Sugerencias habituales (haz clic para anexar a esta sucursal):</span>
+                        <div className="suggestions-chips">
+                          {SUGGESTED_INCIDENCIAS.map(sugg => (
+                            <button
+                              key={sugg.id}
+                              type="button"
+                              className="suggestion-chip"
+                              onClick={() => handleAddSuggestedIncidence(sucIdx, sugg)}
+                            >
+                              <Plus size={12} /> {sugg.name} <span style={{ opacity: 0.75, fontSize: '11px' }}>({sugg.value})</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {hasFeriado && (
+                        <div className="feriado-notice-box" style={{ marginTop: '10px' }}>
+                          <Calendar size={15} style={{ flexShrink: 0 }} />
+                          <span>
+                            <strong>Feriados activos:</strong> Los turnos laborados en días feriados registrados se calcularán con este concepto automáticamente.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="welcome-modal-footer">
+          {activeTab === 'tutorial' ? (
+            <>
+              <button className="btn-ghost" onClick={onClose}>
+                Entendido, ir al Dashboard
+              </button>
+              <button className="btn-primary" onClick={() => setActiveTab('config')}>
+                Configurar Sedes e Incidencias ➔
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn-ghost" onClick={() => setActiveTab('tutorial')}>
+                ← Volver a la Guía
+              </button>
+              <button className="btn-primary" onClick={handleSaveAndStart} disabled={!sucursales.some(s => s.name.trim() !== '')}>
+                <Check size={16} /> Guardar Sedes y Comenzar
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pantalla de Configuración de Sucursales ────────────────────────────────
+function ConfigScreen({ onSave, existingConfig, onCancel, toggleTheme, theme }) {
+  const [sucursales, setSucursales] = useState(() => {
+    const list = existingConfig && existingConfig.length > 0 ? existingConfig : DEFAULT_SUCURSALES_CONFIG;
+    return list.map((s, idx) => initSucursal(s, idx));
+  });
+
+  const handleNameChange = (sucIdx, value) => {
+    setSucursales(prev => prev.map((s, i) => i === sucIdx ? { ...s, name: value } : s));
+  };
+
+  const handleIncidenceNameChange = (sucIdx, itemIdx, value) => {
+    setSucursales(prev => prev.map((s, i) => {
+      if (i !== sucIdx) return s;
+      const newList = [...s.incidenciasList];
+      newList[itemIdx] = { ...newList[itemIdx], name: value };
+      return { ...s, incidenciasList: newList };
+    }));
+  };
+
+  const handleIncidenceValueChange = (sucIdx, itemIdx, value) => {
+    const num = Number(value);
+    setSucursales(prev => prev.map((s, i) => {
+      if (i !== sucIdx) return s;
+      const newList = [...s.incidenciasList];
+      newList[itemIdx] = { ...newList[itemIdx], value: isNaN(num) ? 0 : num };
+      return { ...s, incidenciasList: newList };
+    }));
+  };
+
+  const handleRemoveIncidence = (sucIdx, itemIdx) => {
+    setSucursales(prev => prev.map((s, i) => {
+      if (i !== sucIdx) return s;
+      return { ...s, incidenciasList: s.incidenciasList.filter((_, idx) => idx !== itemIdx) };
+    }));
+  };
+
+  const handleAddCustomIncidence = (sucIdx) => {
+    setSucursales(prev => prev.map((s, i) => {
+      if (i !== sucIdx) return s;
+      return {
+        ...s,
+        incidenciasList: [
+          ...s.incidenciasList,
+          { id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`, name: 'Nueva Incidencia', type: 'custom', value: 1 }
+        ]
+      };
+    }));
+  };
+
+  const handleAddSuggestedIncidence = (sucIdx, sugg) => {
+    setSucursales(prev => prev.map((s, i) => {
+      if (i !== sucIdx) return s;
+      return {
+        ...s,
+        incidenciasList: [
+          ...s.incidenciasList,
+          { id: `${sugg.type}_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`, name: sugg.name, type: sugg.type, value: sugg.value }
+        ]
+      };
     }));
   };
 
   const handleAdd = () => {
     setSucursales(prev => [
       ...prev,
-      {
-        ...DEFAULT_SUCURSAL_TEMPLATE,
-        name: `Sucursal ${prev.length + 1}`
-      }
+      initSucursal({ name: `Sucursal ${prev.length + 1}` }, prev.length)
     ]);
   };
 
@@ -295,7 +662,9 @@ function ConfigScreen({ onSave, existingConfig, onCancel, toggleTheme, theme }) 
   };
 
   const handleSave = () => {
-    const valid = sucursales.filter(s => s.name.trim() !== '');
+    const valid = sucursales
+      .filter(s => s.name.trim() !== '')
+      .map(s => normalizeConfig(s));
     if (valid.length === 0) return;
     onSave(valid);
   };
@@ -303,141 +672,140 @@ function ConfigScreen({ onSave, existingConfig, onCancel, toggleTheme, theme }) 
   const isValid = sucursales.some(s => s.name.trim() !== '');
 
   return (
-    <div className="container" style={{ minHeight: '100vh', justifyContent: 'flex-start', paddingTop: '2rem' }}>
-      <button onClick={toggleTheme} className="theme-switch-btn" aria-label="Cambiar tema">
-        {theme === 'dark' ? <Sun className="sun-icon" size={20} /> : <Moon className="moon-icon" size={20} />}
-      </button>
-
-      <div style={{ width: '100%', maxWidth: '840px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingBottom: '3rem' }}>
-        {/* Header */}
-        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.5rem 2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ background: 'var(--primary)', borderRadius: '10px', padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Building2 size={26} color="#000" />
-            </div>
-            <div>
-              <h1 style={{ fontSize: '1.35rem', fontWeight: 700, fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', margin: 0 }}>
-                Configuración de Sucursales e Incidencias
-              </h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
-                Personaliza el nombre de cada sucursal, activa qué incidencias computar y define su valor.
-              </p>
-            </div>
+    <div className="container" style={{ justifyContent: 'flex-start', paddingTop: '1.25rem' }}>
+      <header className="app-header">
+        <div className="header-title-container">
+          <div className="header-logo"><Building2 size={24} /></div>
+          <div className="header-title">
+            <h1>Configuración de Sucursales</h1>
+            <p>Define sucursales, incidencias personalizadas a computar y sus valores</p>
           </div>
+        </div>
+        <div className="app-header-actions">
           {onCancel && (
-            <button
-              onClick={onCancel}
-              style={{
-                background: 'transparent',
-                border: '1px solid var(--border)',
-                color: 'var(--text-secondary)',
-                borderRadius: '8px',
-                padding: '0.5rem 1rem',
-                fontSize: '0.82rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                fontWeight: 500
-              }}
-            >
-              <ChevronLeft size={16} /> Volver
+            <button className="btn-header" onClick={onCancel}>
+              <ChevronLeft size={15} /> Volver
             </button>
           )}
+          <button
+            onClick={toggleTheme}
+            className="theme-toggle"
+            aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+            title={theme === 'dark' ? 'Tema claro' : 'Tema oscuro'}
+          >
+            {theme === 'dark' ? <Sun className="sun-icon" size={18} /> : <Moon className="moon-icon" size={18} />}
+          </button>
         </div>
+      </header>
 
-        {/* Sucursales Cards */}
-        {sucursales.map((suc, idx) => {
-          const hasFeriadoActive = suc.incidencias?.feriado !== false;
+      <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px', paddingBottom: '24px' }}>
+        {sucursales.map((suc, sucIdx) => {
+          const hasFeriadoActive = suc.incidenciasList.some(i => i.type === 'feriado' || i.name.toLowerCase().includes('feriado'));
 
           return (
-            <div key={idx} className="config-sucursal-card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-light)', paddingBottom: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Building2 size={18} style={{ color: 'var(--primary-active)' }} />
-                  <span style={{ fontWeight: 700, fontSize: '1rem', fontFamily: 'var(--font-heading)' }}>
-                    Sucursal #{idx + 1}
-                  </span>
+            <div key={sucIdx} className="config-sucursal-card">
+              <div className="config-card-head">
+                <div className="config-card-title">
+                  <Building2 size={18} />
+                  <span>Sucursal #{sucIdx + 1}</span>
+                  <span className="config-count">{suc.name.trim() ? 'Configurada' : 'Sin nombre'}</span>
                 </div>
                 {sucursales.length > 1 && (
-                  <button
-                    onClick={() => handleRemove(idx)}
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.08)',
-                      border: '1px solid rgba(239, 68, 68, 0.2)',
-                      color: '#ef4444',
-                      borderRadius: '8px',
-                      padding: '0.35rem 0.75rem',
-                      fontSize: '0.75rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                      fontWeight: 600
-                    }}
-                  >
+                  <button className="btn-danger-soft" onClick={() => handleRemove(sucIdx)}>
                     <Trash2 size={13} /> Eliminar
                   </button>
                 )}
               </div>
 
-              {/* Nombre de la sucursal */}
-              <div className="config-group" style={{ marginBottom: '0.5rem' }}>
-                <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.35rem', fontWeight: 600 }}>
-                  Nombre de la Sucursal *
-                </label>
+              <div className="config-group" style={{ marginBottom: '14px' }}>
+                <label className="field-label">Nombre de la sucursal *</label>
                 <input
                   type="text"
                   className="input-text"
                   placeholder="Ej: Sambil, La Vela, Tienda Central..."
                   value={suc.name}
-                  onChange={e => handleNameChange(idx, e.target.value)}
+                  onChange={e => handleNameChange(sucIdx, e.target.value)}
                 />
               </div>
 
-              {/* Selección de incidencias y valores */}
               <div>
-                <label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.4rem', fontWeight: 600 }}>
-                  Incidencias y Valores a Computar:
-                </label>
-                <div className="incidence-config-grid">
-                  {INCIDENCE_DEFINITIONS.map(def => {
-                    const isChecked = suc.incidencias?.[def.key] !== false;
-                    return (
-                      <div key={def.key} className="incidence-config-item" style={{ opacity: isChecked ? 1 : 0.65 }}>
-                        <label className="incidence-checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => handleToggleIncidencia(idx, def.key)}
-                          />
-                          <span>{def.label}</span>
-                        </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <label className="field-label" style={{ marginBottom: 0 }}>
+                    Incidencias y valores a computar ({suc.incidenciasList.length})
+                  </label>
+                  <button
+                    type="button"
+                    className="btn-header"
+                    onClick={() => handleAddCustomIncidence(sucIdx)}
+                    style={{ fontSize: '12px', padding: '4px 10px' }}
+                  >
+                    <Plus size={14} /> Anexar Incidencia
+                  </button>
+                </div>
+
+                {suc.incidenciasList.length === 0 ? (
+                  <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-tertiary)', fontSize: '13px', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}>
+                    No hay incidencias para esta sucursal. Haz clic en "Anexar Incidencia" o utiliza las sugerencias.
+                  </div>
+                ) : (
+                  <div>
+                    {suc.incidenciasList.map((item, itemIdx) => (
+                      <div key={item.id || itemIdx} className="custom-incidence-row">
+                        <input
+                          type="text"
+                          className="input-text"
+                          style={{ height: '34px', fontSize: '13px' }}
+                          placeholder="Nombre de la incidencia (ej: Turno Cierre)"
+                          value={item.name}
+                          onChange={e => handleIncidenceNameChange(sucIdx, itemIdx, e.target.value)}
+                        />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                            {def.valLabel}:
-                          </span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontWeight: 600 }}>VAL:</span>
                           <input
                             type="number"
                             className="incidence-value-input"
+                            style={{ height: '34px', width: '60px' }}
                             min="0"
                             max="20"
                             step="1"
-                            value={suc[def.valField] ?? 0}
-                            disabled={!isChecked}
-                            onChange={(e) => handleValueChange(idx, def.valField, e.target.value)}
+                            value={item.value ?? 0}
+                            onChange={e => handleIncidenceValueChange(sucIdx, itemIdx, e.target.value)}
                           />
                         </div>
+                        <button
+                          type="button"
+                          className="btn-action-delete"
+                          onClick={() => handleRemoveIncidence(sucIdx, itemIdx)}
+                          title="Eliminar incidencia"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                )}
+
+                <div className="suggestions-container">
+                  <span className="suggestions-title">Sugerencias habituales (haz clic para anexar a esta sucursal):</span>
+                  <div className="suggestions-chips">
+                    {SUGGESTED_INCIDENCIAS.map(sugg => (
+                      <button
+                        key={sugg.id}
+                        type="button"
+                        className="suggestion-chip"
+                        onClick={() => handleAddSuggestedIncidence(sucIdx, sugg)}
+                      >
+                        <Plus size={12} /> {sugg.name} <span style={{ opacity: 0.75, fontSize: '11px' }}>({sugg.value})</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {hasFeriadoActive && (
-                  <div className="feriado-notice-box">
+                  <div className="feriado-notice-box" style={{ marginTop: '12px' }}>
                     <Calendar size={15} style={{ flexShrink: 0 }} />
                     <span>
-                      <strong>Feriados activados:</strong> El sistema validará los días feriados registrados para computar los turnos correspondientes con valor <strong>{suc.valorFeriado ?? 1}</strong>.
+                      <strong>Feriados activados:</strong> El sistema validará los días feriados registrados para computar los turnos correspondientes.
                     </span>
                   </div>
                 )}
@@ -446,54 +814,18 @@ function ConfigScreen({ onSave, existingConfig, onCancel, toggleTheme, theme }) 
           );
         })}
 
-        {/* Botón Agregar Sucursal */}
-        <button
-          onClick={handleAdd}
-          className="btn-primary"
-          style={{
-            background: 'var(--bg-surface)',
-            border: '1.5px dashed var(--border)',
-            color: 'var(--text-primary)',
-            boxShadow: 'none',
-            width: '100%',
-            fontWeight: 600
-          }}
-        >
+        <button onClick={handleAdd} className="btn-add-branch">
           <Plus size={18} /> Agregar otra sucursal
         </button>
 
-        {/* Botón Guardar */}
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+        <div className="config-actions">
           {onCancel && (
-            <button
-              onClick={onCancel}
-              style={{
-                flex: 1,
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-primary)',
-                borderRadius: '8px',
-                padding: '0.75rem',
-                fontSize: '0.9rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
+            <button onClick={onCancel} className="btn-ghost">
               Cancelar
             </button>
           )}
-          <button
-            onClick={handleSave}
-            className="btn-primary"
-            disabled={!isValid}
-            style={{
-              flex: 2,
-              background: isValid ? 'var(--primary)' : undefined,
-              boxShadow: 'none',
-              fontWeight: 600
-            }}
-          >
-            <CheckCircle2 size={18} /> Guardar Configuración e Iniciar
+          <button onClick={handleSave} className="btn-primary" disabled={!isValid}>
+            <CheckCircle2 size={18} /> Guardar configuración e iniciar
           </button>
         </div>
       </div>
@@ -505,20 +837,20 @@ function ConfigScreen({ onSave, existingConfig, onCancel, toggleTheme, theme }) 
 
 // ─── App Principal ──────────────────────────────────────────────────────────
 function App() {
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(() => {
+    const stored = localStorage.getItem('theme');
+    if (stored === 'light' || stored === 'dark') return stored;
+    return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light';
+  });
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    localStorage.setItem('theme', nextTheme);
-  };
+  const toggleTheme = () => setTheme(prev => {
+    const next = prev === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', next);
+    return next;
+  });
 
   useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('light-theme');
-    } else {
-      document.documentElement.classList.remove('light-theme');
-    }
+    document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
   // ── Configuración de sucursales (persistida en localStorage) ──
@@ -535,6 +867,10 @@ function App() {
 
   const [sucursalesConfig, setSucursalesConfig] = useState(loadSucursalesConfig);
   const [showConfig, setShowConfig] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(() => {
+    return !localStorage.getItem('tutorial_viewed');
+  });
+  const [welcomeModalTab, setWelcomeModalTab] = useState('tutorial');
 
   const handleSaveConfig = (config) => {
     setSucursalesConfig(config);
@@ -542,6 +878,7 @@ function App() {
     // Resetear incidencias al cambiar config
     resetIncidencias(config);
     setShowConfig(false);
+    setShowWelcomeModal(false);
   };
 
   // ── Estado de datos ──
@@ -946,92 +1283,84 @@ function App() {
   // ── Dashboard Principal ──
   return (
     <div className="container">
-      <button onClick={toggleTheme} className="theme-switch-btn" aria-label="Cambiar tema">
-        {theme === 'dark' ? <Sun className="sun-icon" size={20} /> : <Moon className="moon-icon" size={20} />}
-      </button>
-      <div className="orb orb-1"></div>
-      <div className="orb orb-2"></div>
-
       {/* Header */}
-      <header>
+      <header className="app-header">
         <div className="header-title-container">
           <div className="header-logo">
-            <FileSpreadsheet size={28} color="#ffffff" />
+            <FileSpreadsheet size={22} />
           </div>
           <div className="header-title">
-            <h1>Cálculo Automático de Incidencias</h1>
-            <p>Procesamiento automatizado de bonos nocturnos, feriados, domingos y ausencias</p>
+            <h1>Control de Incidencias</h1>
+            <p>Cálculo automático de bonos, feriados, domingos y ausencias</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <div className="tabs-container" style={{ margin: 0, padding: '0.25rem' }}>
+
+        <nav className="app-nav" aria-label="Vistas del sistema">
+          <div className="tabs-container">
             <button
               className={`tab-btn ${currentView === 'live' ? 'active' : ''}`}
               onClick={() => setCurrentView('live')}
-              style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+              aria-current={currentView === 'live' ? 'page' : undefined}
             >
               <Upload size={14} /> Cálculo
             </button>
             <button
               className={`tab-btn ${currentView === 'history' ? 'active' : ''}`}
               onClick={() => { setCurrentView('history'); fetchHistory(); }}
-              style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}
+              aria-current={currentView === 'history' ? 'page' : undefined}
             >
               <FileSpreadsheet size={14} /> Historial
             </button>
           </div>
+        </nav>
 
-          {/* Botón Configuración */}
+        <div className="app-header-actions">
+          <button
+            onClick={() => { setWelcomeModalTab('tutorial'); setShowWelcomeModal(true); }}
+            className="btn-header"
+            title="Ver Guía de Uso del Sistema"
+          >
+            <HelpCircle size={15} /> <span>Guía</span>
+          </button>
           <button
             onClick={() => setShowConfig(true)}
-            style={{
-              background: 'rgba(63, 207, 142, 0.1)',
-              border: '1px solid rgba(63, 207, 142, 0.25)',
-              color: 'var(--primary)',
-              padding: '0.5rem 1rem',
-              borderRadius: '10px',
-              fontSize: '0.8rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              transition: 'all 0.2s'
-            }}
+            className="btn-header"
             title="Editar configuración de sucursales"
           >
-            <Settings size={15} /> Configurar
+            <Settings size={15} /> <span>Configurar</span>
+          </button>
+          <button
+            onClick={toggleTheme}
+            className="theme-toggle"
+            aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+            title={theme === 'dark' ? 'Tema claro' : 'Tema oscuro'}
+          >
+            {theme === 'dark' ? <Sun className="sun-icon" size={18} /> : <Moon className="moon-icon" size={18} />}
           </button>
         </div>
       </header>
 
       {/* Banner historial */}
       {viewingHistoryId && (
-        <div className="glass-card history-banner" style={{
-          padding: '1rem 1.5rem',
-          border: '1px solid rgba(245, 158, 11, 0.3)',
-          background: 'rgba(245, 158, 11, 0.05)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          animation: 'fadeIn 0.3s ease', borderRadius: '16px'
-        }}>
-          <div className="history-banner-content" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#fbbf24' }}>
-            <Info size={20} />
+        <div className="glass-card history-banner">
+          <div className="history-banner-content">
+            <Info size={18} />
             <div>
-              <strong style={{ display: 'block', fontSize: '0.9rem' }}>Visualizando Historial Guardado</strong>
-              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                Archivo: <strong>{historyFilename}</strong> | Período: {MONTH_NAMES[month]} {year} - Quincena {quincena} (Modo Lectura)
+              <strong style={{ display: 'block', fontSize: '13px' }}>Visualizando historial guardado</strong>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {historyFilename} · {MONTH_NAMES[month]} {year} · Quincena {quincena} (solo lectura)
               </span>
             </div>
           </div>
-          <button className="btn-primary" onClick={handleExitHistoryMode} style={{ width: 'auto', padding: '0.5rem 1rem', fontSize: '0.8rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-glass)', color: '#ffffff', boxShadow: 'none' }}>
-            Volver a Cálculo en Vivo
+          <button className="btn-primary" onClick={handleExitHistoryMode}>
+            Volver a cálculo en vivo
           </button>
         </div>
       )}
 
       {/* Vistas */}
       {currentView === 'history' ? (
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minHeight: '500px' }}>
+        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <h2 className="card-title"><FileSpreadsheet size={18} /> Historial de Salidas Guardadas</h2>
           {loadingHistory ? (
             <div className="empty-state">
@@ -1063,19 +1392,19 @@ function App() {
                     const monthName = MONTH_NAMES[item.month];
                     return (
                       <tr key={item.id} style={{ cursor: 'pointer' }} onClick={() => handleLoadHistoryItem(item.id)}>
-                        <td style={{ fontWeight: '500', color: 'var(--secondary)' }}>{savedDate}</td>
+                        <td style={{ fontWeight: '500', color: 'var(--primary-active)' }}>{savedDate}</td>
                         <td style={{ maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.filename}</td>
                         <td><strong>{monthName} {item.year}</strong> - Q{item.quincena}</td>
                         <td>
-                          <span className="feriado-text" style={{ fontSize: '0.8rem', color: '#fbbf24' }}>
+                          <span className="feriado-text" style={{ fontSize: '0.8rem', color: 'var(--warning)' }}>
                             {item.feriados && item.feriados.length > 0 ? item.feriados.map(d => d.split('-')[2]).join(', ') : 'Ninguno'}
                           </span>
                         </td>
                         <td style={{ textAlign: 'center', fontWeight: '700' }}>{item.total_registros}</td>
                         <td>
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                            <button className="btn-primary" onClick={(e) => { e.stopPropagation(); handleLoadHistoryItem(item.id); }} style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.75rem', background: 'var(--primary)', boxShadow: 'none', borderRadius: '6px' }}>Ver</button>
-                            <button className="btn-remove-file" onClick={(e) => handleDeleteHistoryItem(item.id, e)} style={{ padding: '0.4rem', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.05)', color: '#ef4444' }} title="Eliminar de la base de datos"><Trash2 size={14} /></button>
+                          <div className="row-actions">
+                            <button className="btn-table" onClick={(e) => { e.stopPropagation(); handleLoadHistoryItem(item.id); }}>Ver</button>
+                            <button className="btn-table-danger" onClick={(e) => handleDeleteHistoryItem(item.id, e)} title="Eliminar de la base de datos" aria-label="Eliminar registro"><Trash2 size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -1088,23 +1417,56 @@ function App() {
         </div>
       ) : (
         /* VISTA DE CÁLCULO EN VIVO */
-        <div className="dashboard-grid">
+        <>
+          {/* Corporate Solid Hero Card */}
+          {!viewingHistoryId && (
+            <div className="hero-card">
+              <div className="hero-badge-pill">
+                <span className="hero-badge-pill__dot"></span>
+                <span>SISTEMA CORPORATIVO ACTIVO · {sucursalesConfig.length} SEDES ({sucursalesConfig.map(s => s.name).join(' · ')})</span>
+              </div>
+
+              <h2 className="hero-title">
+                Control Central de Incidencias Laborales
+              </h2>
+
+              <p className="hero-description">
+                Plataforma corporativa de auditoría y cómputo automatizado de bonos nocturnos, turnos especiales, feriados, domingos y ausencias conforme a los lineamientos operativos vigentes.
+              </p>
+
+              <div className="hero-actions-row">
+                <button
+                  className="btn-hero-action btn-hero-action--primary"
+                  onClick={() => { setWelcomeModalTab('tutorial'); setShowWelcomeModal(true); }}
+                >
+                  <BookOpen size={16} /> Guía y Tutorial de Uso
+                </button>
+                <button
+                  className="btn-hero-action btn-hero-action--outline"
+                  onClick={() => { setWelcomeModalTab('config'); setShowWelcomeModal(true); }}
+                >
+                  <Building2 size={16} /> Configurar Sedes e Incidencias
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="dashboard-grid">
 
           {/* Left Sidebar */}
-          <div className="sidebar-column" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: '100%', overflowY: 'auto', paddingRight: '0.25rem' }}>
+          <div className="sidebar-column">
 
             {/* Corte */}
             <div className="glass-card">
-              <h2 className="card-title"><Calendar size={18} /> Corte a Calcular</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="config-group" style={{ marginBottom: 0 }}>
-                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '0.35rem' }}>Año</label>
+              <h2 className="card-title"><Calendar size={18} /> Corte a calcular</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="config-group">
+                  <label className="field-label">Año</label>
                   <input
                     type="number" className="input-text" value={year}
                     onChange={(e) => setYear(parseInt(e.target.value, 10) || today.getFullYear())}
                     min="2000" max="2100"
                     disabled={viewingHistoryId !== null}
-                    style={{ background: viewingHistoryId !== null ? 'var(--bg-input, rgba(15,23,42,0.4))' : 'var(--bg-input, rgba(15,23,42,0.8))', cursor: viewingHistoryId !== null ? 'not-allowed' : 'text' }}
                   />
                 </div>
                 <CustomDropdown label="Mes" value={month} onChange={setMonth} disabled={viewingHistoryId !== null} options={MONTH_NAMES.map((name, idx) => ({ value: idx, label: name }))} />
@@ -1114,7 +1476,7 @@ function App() {
 
             {/* File Upload */}
             <div className="glass-card">
-              <h2 className="card-title"><Upload size={18} /> Carga de Archivo</h2>
+              <h2 className="card-title"><Upload size={18} /> Carga de archivo</h2>
               {!file ? (
                 <div className="dropzone" onDragOver={handleDragOver} onDrop={handleDrop} onClick={() => document.getElementById('fileInput').click()}>
                   <div className="dropzone-icon"><Upload size={24} /></div>
@@ -1130,7 +1492,7 @@ function App() {
                     <CheckCircle2 className="file-info-icon" size={24} />
                     <div className="file-details">
                       <h4>{file.name}</h4>
-                      {file.size > 0 ? <p>{(file.size / 1024).toFixed(1)} KB</p> : <p className="feriado-text" style={{ color: '#fbbf24', fontWeight: '500' }}>Registro Histórico</p>}
+                      {file.size > 0 ? <p>{(file.size / 1024).toFixed(1)} KB</p> : <p className="feriado-text" style={{ color: 'var(--warning)', fontWeight: '500' }}>Registro Histórico</p>}
                     </div>
                   </div>
                   {viewingHistoryId ? (
@@ -1141,51 +1503,49 @@ function App() {
                 </div>
               )}
 
-              {file && (
-                <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="upload-actions">
                   {!viewingHistoryId && (
-                    <button className="btn-primary" onClick={handleProcess} disabled={loading || rawData.length === 0} style={{ background: 'var(--primary)', boxShadow: 'none' }}>
-                      <Sparkles size={18} style={{ marginRight: '0.25rem' }} />
-                      {loading ? 'Procesando...' : calculatedRawData.length > 0 ? 'Reprocesar Incidencias' : 'Procesar Incidencias'}
+                    <button className="btn-primary" onClick={handleProcess} disabled={loading || rawData.length === 0}>
+                      <Sparkles size={17} />
+                      {loading ? 'Procesando...' : calculatedRawData.length > 0 ? 'Reprocesar incidencias' : 'Procesar incidencias'}
                     </button>
                   )}
                   {(calculatedRawData.length > 0 || viewingHistoryId) && !viewingHistoryId && (
-                    <button className="btn-primary" onClick={handleSaveToDatabase} disabled={saving} style={{ background: 'var(--primary-active)', boxShadow: 'none', color: '#FFFFFF' }}>
-                      <Plus size={18} /> {saving ? 'Guardando...' : 'Guardar en Base de Datos'}
+                    <button className="btn-secondary" onClick={handleSaveToDatabase} disabled={saving}>
+                      <Plus size={17} /> {saving ? 'Guardando...' : 'Guardar en base de datos'}
                     </button>
                   )}
                 </div>
-              )}
             </div>
 
             {/* Feriados */}
             <div className="glass-card">
-              <h2 className="card-title"><Calendar size={18} /> Días Feriados</h2>
-              <div className="feriados-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div className="feriados-input-row" style={{ display: 'flex', gap: '0.5rem' }}>
+              <h2 className="card-title"><Calendar size={18} /> Días feriados</h2>
+              <div className="feriados-container">
+                <div className="feriados-input-row">
                   <input type="date" className="input-text" value={newFeriadoDate} onChange={(e) => setNewFeriadoDate(e.target.value)} style={{ flexGrow: 1 }} disabled={viewingHistoryId !== null} />
-                  <button className="btn-icon" onClick={handleAddFeriado} style={{ padding: '0.75rem' }} disabled={viewingHistoryId !== null}><Plus size={18} /></button>
+                  <button className="btn-icon" onClick={handleAddFeriado} disabled={viewingHistoryId !== null} title="Agregar feriado" aria-label="Agregar feriado"><Plus size={18} /></button>
                 </div>
-                <div className="feriados-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', maxHeight: '120px', overflowY: 'auto', padding: '0.5rem', background: 'var(--bg-feriados-box, rgba(0,0,0,0.2))', borderRadius: '10px', border: '1px solid var(--border-glass)' }}>
+                <div className="feriados-tags">
                   {feriados.length === 0 ? (
-                    <div style={{ color: '#64748b', fontSize: '0.8rem', padding: '0.25rem 0.5rem', width: '100%', textAlign: 'center' }}>No hay días feriados registrados.</div>
+                    <div className="feriados-empty">No hay días feriados registrados.</div>
                   ) : (
                     feriados.map(date => {
                       const [y, m, d] = date.split('-');
                       return (
-                        <span key={date} className="feriado-tag" style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span key={date} className="feriado-tag">
                           {`${d}/${m}/${y}`}
                           {!viewingHistoryId && (
-                            <button onClick={() => handleRemoveFeriado(date)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
+                            <button onClick={() => handleRemoveFeriado(date)} title="Quitar feriado" aria-label={`Quitar feriado ${d}/${m}/${y}`}>&times;</button>
                           )}
                         </span>
                       );
                     })
                   )}
                 </div>
-                <p style={{ fontSize: '0.72rem', color: '#64748b' }}>Si un colaborador trabaja en estas fechas, computará "FERIADO".</p>
+                <p className="section-note">Si un colaborador trabaja en estas fechas, computará "FERIADO".</p>
                 {activeFeriadosInCorte.length > 0 && (
-                  <div className="feriado-summary-box" style={{ fontSize: '0.75rem', color: '#fbbf24', background: 'rgba(245,158,11,0.05)', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(245,158,11,0.15)' }}>
+                  <div className="feriado-summary-box">
                     <strong>Feriados en este corte:</strong> {activeFeriadosInCorte.map(d => d.split('-')[2]).join(', ')}
                   </div>
                 )}
@@ -1194,9 +1554,9 @@ function App() {
           </div>
 
           {/* Right Panel */}
-          <div className="glass-card" style={{ minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
+          <div className="glass-card" style={{ display: 'flex', flexDirection: 'column' }}>
             <div className="preview-container">
-              <h2 className="card-title"><FileSpreadsheet size={18} /> Tabla de Previsualización y Control</h2>
+              <h2 className="card-title"><FileSpreadsheet size={18} /> Previsualización de incidencias</h2>
 
               {calculatedRawData.length === 0 ? (
                 <div className="empty-state">
@@ -1208,59 +1568,64 @@ function App() {
                     </>
                   ) : (
                     <>
-                      <h3 style={{ color: 'var(--secondary)' }}>Archivo cargado con éxito</h3>
+                      <h3 style={{ color: 'var(--primary-active)' }}>Archivo cargado con éxito</h3>
                       <p>Haz clic en el botón <strong>"Procesar Incidencias"</strong> en el panel izquierdo para calcular los reportes.</p>
                     </>
                   )}
                 </div>
               ) : stats.totalRows === 0 && !filteredIncidencias.length ? (
-                <div className="empty-state" style={{ borderColor: '#ef4444', background: 'rgba(239,68,68,0.05)', padding: '2rem 1.5rem' }}>
-                  <ShieldAlert size={80} style={{ color: '#ef4444' }} />
-                  <h3 style={{ color: '#ef4444' }}>Advertencia: 0 incidencias calculadas</h3>
-                  <p style={{ maxWidth: '500px', margin: '0.5rem auto 1.5rem auto', fontSize: '0.95rem' }}>
+                <div className="empty-state empty-state--danger">
+                  <ShieldAlert size={80} />
+                  <h3>Advertencia: 0 incidencias calculadas</h3>
+                  <p>
                     No se encontraron columnas de fecha en el archivo Excel que coincidan con el periodo filtrado:
-                    <strong> {MONTH_NAMES[month]} {year} - {quincena === 1 ? '1ra Quincena' : '2da Quincena'}</strong>.
+                    <strong> {MONTH_NAMES[month]} {year} · {quincena === 1 ? '1ra quincena' : '2da quincena'}</strong>.
                   </p>
                 </div>
               ) : (
                 <>
                   {/* Stats */}
                   <div className="stats-row">
-                    <div className="stat-box">
-                      <span className="stat-label">Bono Nocturno</span>
-                      <span className="stat-val stat-val-bono">{stats.bonoNocturno}</span>
+                    <div className="stat-box stat-box--bono">
+                      <span className="stat-label">Bono nocturno</span>
+                      <span className="stat-val">{stats.bonoNocturno}</span>
                     </div>
-                    <div className="stat-box">
+                    <div className="stat-box stat-box--domingo">
                       <span className="stat-label">Domingos</span>
-                      <span className="stat-val stat-val-domingo">{stats.domingo}</span>
+                      <span className="stat-val">{stats.domingo}</span>
                     </div>
-                    <div className="stat-box">
+                    <div className="stat-box stat-box--feriado">
                       <span className="stat-label">Feriados</span>
-                      <span className="stat-val stat-val-feriado">{stats.feriado}</span>
+                      <span className="stat-val">{stats.feriado}</span>
                     </div>
-                    <div className="stat-box">
-                      <span className="stat-label">Ausencias Just.</span>
-                      <span className="stat-val stat-val-ausencia-j">{stats.ausenciasJustificadas}</span>
+                    <div className="stat-box stat-box--ausencia-j">
+                      <span className="stat-label">Ausencias just.</span>
+                      <span className="stat-val">{stats.ausenciasJustificadas}</span>
                     </div>
-                    <div className="stat-box">
-                      <span className="stat-label">Ausencias Injust.</span>
-                      <span className="stat-val stat-val-ausencia-i">{stats.ausenciasInjustificadas}</span>
+                    <div className="stat-box stat-box--ausencia-i">
+                      <span className="stat-label">Ausencias injust.</span>
+                      <span className="stat-val">{stats.ausenciasInjustificadas}</span>
                     </div>
                   </div>
 
-                  {/* Search */}
-                  <div className="preview-header-actions" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                    <div className="search-container" style={{ maxWidth: '400px', width: '100%' }}>
+                  {/* Búsqueda + descarga */}
+                  <div className="table-toolbar">
+                    <div className="search-container">
                       <Search size={16} />
-                      <input type="text" placeholder="Buscar por colaborador, código o cargo..." className="search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                      <input
+                        type="text"
+                        placeholder="Buscar colaborador, código o cargo..."
+                        className="search-input"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        aria-label="Buscar incidencias"
+                      />
                     </div>
-                  </div>
-
-                  {/* Download Button */}
-                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
-                    <button className="btn-primary" onClick={handleDownloadExcel} disabled={rawData.length === 0} style={{ background: 'var(--primary)', boxShadow: 'none', padding: '0.6rem 2rem', fontSize: '0.9rem', width: 'auto', minWidth: '220px', maxWidth: '300px', height: '42px', borderRadius: '32px', marginTop: 0 }}>
-                      <Download size={18} /> Descargar Resultados (Excel)
-                    </button>
+                    <div className="toolbar-actions">
+                      <button className="btn-primary" onClick={handleDownloadExcel} disabled={rawData.length === 0}>
+                        <Download size={16} /> Descargar Excel
+                      </button>
+                    </div>
                   </div>
 
                   {/* Sucursales Tabs — generadas dinámicamente desde config */}
@@ -1281,21 +1646,21 @@ function App() {
                     <table>
                       <thead>
                         <tr>
-                          <th>Cod. Empleado</th>
-                          <th>Cédula</th>
+                          <th>Cod.</th>
+                          <th>C.I.</th>
                           <th>Colaborador</th>
                           <th>Cargo</th>
                           <th>Incidencia</th>
                           <th>Valor</th>
                           <th>Fecha</th>
-                          <th>Turno Original</th>
-                          <th style={{ width: '60px' }}>Acciones</th>
+                          <th>Turno</th>
+                          <th style={{ width: '56px' }}>Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredIncidencias.length === 0 ? (
                           <tr>
-                            <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                            <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-tertiary)' }}>
                               No se encontraron registros de incidencias para esta selección.
                             </td>
                           </tr>
@@ -1308,10 +1673,10 @@ function App() {
                             );
                             return (
                               <tr key={`${item.employeeCode}-${item.dateString}-${item.incidenceType}-${index}`}>
-                                <td style={{ fontWeight: '600', color: 'var(--secondary)' }}>{item.employeeCode}</td>
-                                <td>{item.cedula}</td>
-                                <td style={{ fontWeight: '500' }}>{item.employeeName}</td>
-                                <td style={{ color: '#94a3b8' }}>{item.cargo}</td>
+                                <td className="cell-code">{item.employeeCode}</td>
+                                <td className="mono-num">{item.cedula}</td>
+                                <td className="cell-name">{item.employeeName}</td>
+                                <td className="text-muted cell-cargo">{item.cargo}</td>
                                 <td>
                                   <span className={`badge ${
                                     item.incidenceType === 'BONO NOCTURNO' ? 'badge-bono' :
@@ -1323,9 +1688,9 @@ function App() {
                                     {item.incidenceType}
                                   </span>
                                 </td>
-                                <td style={{ fontWeight: '700' }}>{item.value}</td>
-                                <td>{item.dateString}</td>
-                                <td style={{ color: '#64748b', fontSize: '0.8rem', fontStyle: 'italic' }}>{item.originalStatus}</td>
+                                <td className="cell-value">{item.value}</td>
+                                <td className="mono-num">{item.dateString}</td>
+                                <td className="cell-status">{item.originalStatus}</td>
                                 <td>
                                   {!viewingHistoryId && (
                                     <div className="row-actions">
@@ -1347,9 +1712,19 @@ function App() {
             </div>
           </div>
         </div>
+        </>
       )}
 
       <Footer />
+
+      {/* Modal Emergente de Bienvenida y Tutorial */}
+      <WelcomeTutorialModal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        initialTab={welcomeModalTab}
+        existingConfig={sucursalesConfig}
+        onSaveConfig={handleSaveConfig}
+      />
 
       {/* Toast Container */}
       <div className="toast-container">
