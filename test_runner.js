@@ -50,10 +50,10 @@ try {
     console.error('❌ FAIL: Sambil - Bono Nocturno para 1001 el 02 06 2026 no es 3', smBono);
   }
 
-  // Domingo 7 Jun trabajado -> domingo = 1
+  // Domingo 7 Jun trabajado -> domingo = 2 (según configuración de Sambil)
   const smDomingo = sambilList.find(i => i.employeeCode === '1001' && i.dateString === '07 06 2026' && i.incidenceType === 'DOMINGO');
-  if (smDomingo && smDomingo.value === 1) {
-    console.log('✅ OK: Sambil - Domingo trabajado el 07 06 2026 calculó Domingo 1');
+  if (smDomingo && smDomingo.value === 2) {
+    console.log('✅ OK: Sambil - Domingo trabajado el 07 06 2026 calculó Domingo con valor configurado (2)');
   } else {
     console.error('❌ FAIL: Sambil - Domingo para 1001 no se calculó', smDomingo);
   }
@@ -80,11 +80,11 @@ try {
     console.error('❌ FAIL: La Vela - Bono Nocturno incorrecto', { velaBono1, velaBono2 });
   }
 
-  // Presente a tiempo 7 Jun (Domingo) -> bono nocturno = 1, Domingo = 1
+  // Presente a tiempo 7 Jun (Domingo) -> bono nocturno = 2, Domingo = 1
   const velaBonoDom = velaList.find(i => i.employeeCode === '1002' && i.dateString === '07 06 2026' && i.incidenceType === 'BONO NOCTURNO');
   const velaDom = velaList.find(i => i.employeeCode === '1002' && i.dateString === '07 06 2026' && i.incidenceType === 'DOMINGO');
-  if (velaBonoDom?.value === 1 && velaDom?.value === 1) {
-    console.log('✅ OK: La Vela - Turno en domingo calculó Bono Nocturno 1 y Domingo 1');
+  if (velaBonoDom?.value === 2 && velaDom?.value === 1) {
+    console.log('✅ OK: La Vela - Turno en domingo calculó Bono Nocturno 2 y Domingo 1');
   } else {
     console.error('❌ FAIL: La Vela - Turno en domingo incorrecto', { velaBonoDom, velaDom });
   }

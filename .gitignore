@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 # Sensitive data and databases
+data/
 *.db
 *.sqlite
 *.sqlite3
